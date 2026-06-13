@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Sim</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--surf:#f8f8f8;--surf2:#f0f0f0;
+  --brd:#e0e0e0;--brd2:#ccc;
+  --txt:#111;--txt2:#555;--txt3:#999;
+  --green:#1a8a4a;--red:#c0392b;--orange:#d4781a;
+  --r:6px;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;min-height:100vh}
+
+/* ── HEADER ── */
+#hdr{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:2px solid var(--txt);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#hdr h1{font-size:17px;font-weight:800;letter-spacing:-.3px;margin-right:4px}
+.tabs{display:flex;gap:4px}
+.tab{padding:5px 15px;border:1.5px solid var(--brd2);border-radius:30px;background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--txt2);transition:all .15s}
+.tab.on,.tab:hover{background:var(--txt);color:#fff;border-color:var(--txt)}
+#time-btn{margin-left:auto;padding:7px 18px;background:var(--txt);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px}
+#time-btn:hover{opacity:.83}
+
+main{padding:20px;max-width:900px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+
+/* ── GENERIC ── */
+.card{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px}
+.sec-head h2{font-size:15px;font-weight:700}
+
+.btn{display:inline-flex;align-items:center;padding:5px 13px;border-radius:var(--r);border:1.5px solid var(--brd2);background:var(--bg);cursor:pointer;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--surf2)}
+.btn.p{background:var(--txt);color:#fff;border-color:var(--txt)}.btn.p:hover{opacity:.85}
+.btn.g{border-color:var(--green);color:var(--green)}.btn.g:hover{background:#edf7f1}
+.btn.r{border-color:var(--red);color:var(--red)}.btn.r:hover{background:#fdf0ed}
+.btn.o{border-color:var(--orange);color:var(--orange)}.btn.o:hover{background:#fef5ec}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+.tag{display:inline-block;padding:1px 7px;border-radius:30px;font-size:10px;font-weight:700;border:1px solid var(--brd);background:var(--surf2);color:var(--txt2)}
+.tag.on{background:#e6f7ee;border-color:#9dd6b5;color:var(--green)}
+.tag.off{background:#fdf0ed;border-color:#f1c0b8;color:var(--red)}
+.tag.c{color:#888;border-color:#ccc}
+.tag.u{color:var(--green);border-color:#9dd6b5;background:#edf7f1}
+.tag.ra{color:#2980b9;border-color:#9dc4e8;background:#eaf3fb}
+.tag.e{color:#8e44ad;border-color:#c5a0d9;background:#f5edfb}
+.tag.l{color:var(--orange);border-color:#f0b97a;background:#fef5ec}
+
+/* ── MODAL ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px}
+.ov.h{display:none}
+.modal{background:var(--bg);border-radius:10px;padding:22px;width:100%;max-width:500px;max-height:92vh;overflow-y:auto;border:1px solid var(--brd2);box-shadow:0 8px 32px rgba(0,0,0,.16)}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:16px}
+.fld{margin-bottom:11px}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.fld input,.fld select,.fld textarea{width:100%;padding:7px 10px;border:1.5px solid var(--brd2);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--txt)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--txt)}
+.fld textarea{resize:vertical;min-height:58px}
+.frow{display:flex;gap:10px}.frow .fld{flex:1}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+hr.d{border:none;border-top:1px solid var(--brd);margin:10px 0}
+
+/* ── SHOPS (CREATE) ── */
+.shop-card{border:1.5px solid var(--brd2);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.shop-card-head{background:var(--surf);padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--brd)}
+.shop-card-body{padding:12px 16px}
+.shop-card-body.collapsed{display:none}
+.item-row{background:var(--bg);border:1px solid var(--brd);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px}
+.item-row:last-child{margin-bottom:0}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:13px}
+.item-meta{font-size:11px;color:var(--txt2);margin-top:2px}
+
+/* ── ACCOUNTS (PLAY) ── */
+.acct-card{border:1.5px solid var(--brd2);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.acct-head{background:var(--surf);padding:12px 16px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.acct-name{font-weight:800;font-size:15px;flex:1}
+.acct-body{padding:14px 16px}
+.acct-body.collapsed{display:none}
+.stats{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px}
+.stat .lbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px}
+.stat .val{font-size:17px;font-weight:800;margin-top:1px}
+.collapse-btn{background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;color:var(--txt2);flex-shrink:0;transition:transform .2s}
+.collapse-btn.open{transform:rotate(0deg)}
+.collapse-btn.closed{transform:rotate(-90deg)}
+
+/* ── INVENTORY ── */
+.inv-box{border:1px solid var(--brd);border-radius:var(--r);max-height:420px;overflow-y:auto;background:var(--surf)}
+.inv-item{padding:12px 14px;border-bottom:1px solid var(--brd);display:flex;align-items:flex-start;gap:10px;height:148px;box-sizing:border-box}
+.inv-item:last-child{border-bottom:none}
+.inv-info{flex:1;min-width:0;display:flex;flex-direction:column;height:100%;overflow:hidden}
+.inv-name{font-weight:600;font-size:13px;flex-shrink:0}
+.inv-type{font-size:11px;color:var(--txt2);margin-top:2px;flex-shrink:0}
+.inv-desc{font-size:11px;color:var(--txt2);margin-top:3px;white-space:pre-wrap;word-break:break-word;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0}
+.inv-desc::-webkit-scrollbar{width:3px}.inv-desc::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:2px}
+.qbar-wrap{display:flex;align-items:center;gap:6px;margin-top:5px;flex-shrink:0}
+.qbar-bg{flex:1;height:4px;background:var(--surf2);border-radius:2px;overflow:hidden}
+.qbar-fill{height:100%;border-radius:2px;transition:width .3s}
+.qlbl{font-size:11px;color:var(--txt2);white-space:nowrap}
+.inv-right{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;height:100%;justify-content:space-between}
+.inv-val{font-size:13px;font-weight:700;white-space:nowrap}
+
+/* ── STORE ── */
+.store-group{margin-bottom:18px}
+.store-group-title{font-size:13px;font-weight:700;border-bottom:1.5px solid var(--txt);padding-bottom:5px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.store-item{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px}
+.store-item-info{flex:1;min-width:0}
+.store-item-name{font-weight:600;font-size:13px}
+.store-item-meta{font-size:11px;color:var(--txt2);margin-top:2px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--txt);color:#fff;padding:9px 16px;border-radius:var(--r);font-size:13px;z-index:9999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;max-width:320px}
+#toast.show{opacity:1;transform:translateY(0)}
+
+.empty{text-align:center;padding:28px 16px;color:var(--txt3);font-size:13px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:3px}
+.inst-badge{display:inline-flex;align-items:center;gap:4px;background:#eaf3fb;border:1px solid #9dc4e8;color:#2471a3;border-radius:30px;font-size:10px;font-weight:700;padding:1px 8px}
+.inst-warn{background:#fdf0ed;border-color:#f1c0b8;color:var(--red)}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <h1>Market Sim</h1>
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('create')">Create</button>
+    <button class="tab" onclick="switchTab('play')">Play</button>
+  </div>
+  <button id="time-btn" onclick="advanceTime()">⏩ Advance Time</button>
+</div>
+<main>
+  <!-- CREATE -->
+  <div id="v-create" class="view on">
+    <div class="sec-head">
+      <h2>Shops &amp; Mystery Boxes</h2>
+      <div class="btn-row">
+        <button class="btn p" onclick="openShopModal()">+ Shop</button>
+        <button class="btn p" onclick="openMysteryModal()">+ Mystery Box</button>
+      </div>
+    </div>
+    <div id="shops-list"></div>
+  </div>
+  <!-- PLAY -->
+  <div id="v-play" class="view">
+    <div class="sec-head">
+      <h2>Accounts</h2>
+      <button class="btn p" onclick="openAccountModal()">+ Account</button>
+    </div>
+    <div id="accounts-list"></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Shop -->
+<div id="m-shop" class="ov h">
+  <div class="modal">
+    <h2 id="m-shop-title">New Shop</h2>
+    <div class="fld"><label>Name</label><input id="s-name" type="text" placeholder="Shop name"></div>
+    <div class="fld"><label>Description</label><textarea id="s-desc" placeholder="Optional description"></textarea></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('m-shop')">Cancel</button>
+      <button class="btn p" onclick="saveShop()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mystery Box -->
+<div id="m-mystery" class="ov h">
+  <div class="modal">
+    <h2 id="m-mystery-title">New Mystery Box</h2>
+    <div class="fld"><label>Name</label><input id="mb-name" type="text" placeholder="Box name"></div>
+    <div class="fld"><label>Description</label><textarea id="mb-desc" placeholder="Optional description"></textarea></div>
+    <div class="fld"><label>Price</label><input id="mb-price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('m-mystery')">Cancel</button>
+      <button class="btn p" onclick="saveMystery()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shop Item -->
+<div id="m-sitem" class="ov h">
+  <div class="modal">
+    <h2 id="m-sitem-title">New Item</h2>
+    <div class="frow">
+      <div class="fld"><label>Name</label><input id="si-name" type="text" placeholder="Item name"></div>
+      <div class="fld"><label>Type</label><input id="si-type" type="text" placeholder="e.g. Weapon"></div>
+    </div>
+    <div class="fld"><label>Rarity</label>
+      <select id="si-rarity"><option>Common</option><option>Uncommon</option><option>Rare</option><option>Epic</option><option>Legendary</option></select>
+    </div>
+    <div class="fld"><label>Description</label><textarea id="si-desc" placeholder="Optional"></textarea></div>
+    <div class="frow">
+      <div class="fld"><label>Price</label><input id="si-price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="fld"><label>Max Quality</label><input id="si-maxq" type="number" min="1" step="1" placeholder="10"></div>
+    </div>
+    <div class="fld"><label>Value per Quality Point</label><input id="si-vpq" type="number" min="0" step="0.01" placeholder="2.00"></div>
+    <div class="frow">
+      <div class="fld"><label>Natural Degrade % / tick</label><input id="si-ndeg" type="number" min="0" max="100" step="0.01" placeholder="50"></div>
+      <div class="fld"><label>High Degrade % / tick</label><input id="si-hdeg" type="number" min="0" max="100" step="0.01" placeholder="10"></div>
+    </div>
+    <hr class="d">
+    <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Installment Option (optional)</div>
+    <div class="frow">
+      <div class="fld"><label>Installment Total Price</label><input id="si-itotal" type="number" min="0" step="0.01" placeholder="Leave blank to disable"></div>
+      <div class="fld"><label>Number of Payments</label><input id="si-imonths" type="number" min="1" step="1" placeholder="12"></div>
+    </div>
+    <div style="font-size:11px;color:var(--txt3);margin-top:-6px;margin-bottom:8px">Monthly payment = total ÷ payments. Account salary must ≥ monthly payment to buy.</div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('m-sitem')">Cancel</button>
+      <button class="btn p" onclick="saveShopItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mystery Item -->
+<div id="m-mitem" class="ov h">
+  <div class="modal">
+    <h2 id="m-mitem-title">New Mystery Item</h2>
+    <div class="frow">
+      <div class="fld"><label>Name</label><input id="mi-name" type="text" placeholder="Item name"></div>
+      <div class="fld"><label>Type</label><input id="mi-type" type="text" placeholder="e.g. Weapon"></div>
+    </div>
+    <div class="fld"><label>Rarity</label>
+      <select id="mi-rarity"><option>Common</option><option>Uncommon</option><option>Rare</option><option>Epic</option><option>Legendary</option></select>
+    </div>
+    <div class="fld"><label>Description</label><textarea id="mi-desc" placeholder="Optional"></textarea></div>
+    <div class="frow">
+      <div class="fld"><label>Drop Chance (0–100%)</label><input id="mi-chance" type="number" min="0" max="100" step="0.01" placeholder="25"></div>
+      <div class="fld"><label>Max Quality</label><input id="mi-maxq" type="number" min="1" step="1" placeholder="10"></div>
+    </div>
+    <div class="fld"><label>Value per Quality Point</label><input id="mi-vpq" type="number" min="0" step="0.01" placeholder="2.00"></div>
+    <div class="frow">
+      <div class="fld"><label>Natural Degrade % / tick</label><input id="mi-ndeg" type="number" min="0" max="100" step="0.01" placeholder="50"></div>
+      <div class="fld"><label>High Degrade % / tick</label><input id="mi-hdeg" type="number" min="0" max="100" step="0.01" placeholder="10"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('m-mitem')">Cancel</button>
+      <button class="btn p" onclick="saveMysteryItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Account -->
+<div id="m-acct" class="ov h">
+  <div class="modal">
+    <h2 id="m-acct-title">New Account</h2>
+    <div class="fld"><label>Name</label><input id="ac-name" type="text" placeholder="Account name"></div>
+    <div class="frow">
+      <div class="fld"><label>Starting Money</label><input id="ac-money" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="fld"><label>Timely Salary</label><input id="ac-salary" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('m-acct')">Cancel</button>
+      <button class="btn p" onclick="saveAccount()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Finances -->
+<div id="m-fin" class="ov h">
+  <div class="modal">
+    <h2>Edit Finances</h2>
+    <div class="fld">
+      <label>Adjust Money</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="fin-adj" type="number" min="0" step="0.01" placeholder="Amount" style="flex:1;padding:7px 10px;border:1.5px solid var(--brd2);border-radius:var(--r);font-size:13px">
+        <button class="btn g" onclick="adjMoney(1)">+ Add</button>
+        <button class="btn r" onclick="adjMoney(-1)">− Sub</button>
+      </div>
+    </div>
+    <div class="fld"><label>Set Salary (replaces current)</label><input id="fin-salary" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('m-fin')">Cancel</button>
+      <button class="btn p" onclick="saveSalary()">Update Salary</button>
+    </div>
+  </div>
+</div>
+
+<!-- Store -->
+<div id="m-store" class="ov h">
+  <div class="modal" style="max-width:560px">
+    <h2>Store</h2>
+    <div id="store-body"></div>
+    <div class="mfoot"><button class="btn" onclick="closeM('m-store')">Close</button></div>
+  </div>
+</div>
+
+<!-- Transfer -->
+<div id="m-transfer" class="ov h">
+  <div class="modal">
+    <h2>Transfer Item</h2>
+    <p style="font-size:13px;color:var(--txt2);margin-bottom:12px">Send <strong id="tr-item-name"></strong> to:</p>
+    <div id="tr-accts"></div>
+    <div class="mfoot"><button class="btn" onclick="closeM('m-transfer')">Cancel</button></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE & PERSISTENCE
+// ═══════════════════════════════════════════════
+const LS = 'marketsim_v3';
+let S = { shops:[], accounts:[] };
+
+function load(){ try{ const r=localStorage.getItem(LS); if(r) S=JSON.parse(r); }catch(e){} }
+function save(){ localStorage.setItem(LS,JSON.stringify(S)); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+// collapse state — keyed by shop/account id, true=expanded
+const _shopOpen={};
+const _acctOpen={};
+function toggleCollapse(map, id){ map[id]=!map[id]; renderAll(); }
+function isOpen(map, id){ return map[id]!==false; } // default open
+
+// ═══════════════════════════════════════════════
+//  FORMATTING
+// ═══════════════════════════════════════════════
+function fmt(n){
+  const v=parseFloat(n)||0;
+  return v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
+}
+function $$(n){ return '$'+fmt(n); }
+function pn(v){ return parseFloat(v)||0; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function rarityTag(r){
+  const map={Common:'c',Uncommon:'u',Rare:'ra',Epic:'e',Legendary:'l'};
+  return `<span class="tag ${map[r]||'c'}">${esc(r)}</span>`;
+}
+
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',['create','play'][i]===t));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('v-'+t).classList.add('on');
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════
+function renderAll(){ renderShops(); renderAccounts(); }
+
+/* ── CREATE VIEW ── */
+function renderShops(){
+  const el=document.getElementById('shops-list');
+  if(!S.shops.length){ el.innerHTML='<div class="empty">No shops or mystery boxes yet.</div>'; return; }
+  el.innerHTML=[...S.shops].reverse().map(renderShopCard).join('');
+}
+
+function renderShopCard(s){
+  const isShop=s.type==='shop';
+  const badge=isShop?'Shop':'Mystery Box';
+  const priceInfo=isShop?'':`&nbsp;·&nbsp;Price: ${$$(s.price)}`;
+  const open=isOpen(_shopOpen,s.id);
+  const itemsHtml=(s.items||[]).length
+    ? [...s.items].reverse().map(it=>renderItemRow(s,it)).join('')
+    : '<div style="font-size:12px;color:var(--txt3)">No items yet.</div>';
+  const addBtn=isShop
+    ?`<button class="btn" onclick="openShopItemModal('${s.id}')">+ Item</button>`
+    :`<button class="btn" onclick="openMysteryItemModal('${s.id}')">+ Item</button>`;
+  return `
+<div class="shop-card">
+  <div class="shop-card-head">
+    <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0">
+      <button class="collapse-btn ${open?'open':'closed'}" onclick="toggleCollapse(_shopOpen,'${s.id}')" title="${open?'Collapse':'Expand'}">▼</button>
+      <div style="min-width:0">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span style="font-weight:700;font-size:14px">${esc(s.name)}</span>
+          <span class="tag">${badge}</span>
+          <span class="tag ${s.enabled?'on':'off'}">${s.enabled?'Active':'Disabled'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:3px">${esc(s.desc||'')}${priceInfo}</div>
+      </div>
+    </div>
+    <div class="btn-row" style="flex-shrink:0">
+      <button class="btn" onclick="toggleShop('${s.id}')">${s.enabled?'Disable':'Enable'}</button>
+      <button class="btn" onclick="editShop('${s.id}')">Edit</button>
+      <button class="btn r" onclick="deleteShop('${s.id}')">Delete</button>
+    </div>
+  </div>
+  <div class="shop-card-body${open?'':' collapsed'}">
+    <div class="btn-row" style="margin-bottom:10px">${addBtn}</div>
+    ${itemsHtml}
+  </div>
+</div>`;
+}
+
+function renderItemRow(shop,it){
+  const isShop=shop.type==='shop';
+  const extra=isShop
+    ?`Price: ${$$(it.price)}${it.installTotal?` · Instalment: ${fmt(it.installMonths)}× ${$$(pn(it.installTotal)/pn(it.installMonths))} (${$$(it.installTotal)} total)`:''}`
+    :`Chance: ${fmt(it.chance)}%`;
+  const visTag=isShop
+    ?`<span class="tag ${it.enabled!==false?'on':'off'}">${it.enabled!==false?'Listed':'Hidden'}</span>`
+    :'';
+  const toggleBtn=isShop
+    ?`<button class="btn" onclick="toggleItem('${shop.id}','${it.id}')">${it.enabled!==false?'Hide':'Show'}</button>`
+    :'';
+  return `
+<div class="item-row">
+  <div class="item-info">
+    <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+      <span class="item-name">${esc(it.name)}</span>
+      ${rarityTag(it.rarity)}${visTag}
+    </div>
+    <div class="item-meta">${esc(it.type||'')} · ${extra} · Max Q: ${fmt(it.maxQuality)} · VPQ: ${$$(it.vpq)}</div>
+    <div class="item-meta">Nat: ${fmt(it.ndeg)}% · High: ${fmt(it.hdeg)}%${it.desc?` · ${esc(it.desc)}`:''}</div>
+  </div>
+  <div class="btn-row">
+    ${toggleBtn}
+    <button class="btn" onclick="editItem('${shop.id}','${it.id}')">Edit</button>
+    <button class="btn r" onclick="deleteItem('${shop.id}','${it.id}')">Del</button>
+  </div>
+</div>`;
+}
+
+/* ── PLAY VIEW ── */
+function renderAccounts(){
+  const el=document.getElementById('accounts-list');
+  if(!S.accounts.length){ el.innerHTML='<div class="empty">No accounts yet.</div>'; return; }
+  el.innerHTML=S.accounts.map(renderAccountCard).join('');
+  injectDescs();
+}
+
+function renderAccountCard(a){
+  const totalVal=pn(a.money)+(a.inventory||[]).reduce((s,it)=>s+invVal(it),0);
+  const open=isOpen(_acctOpen,a.id);
+  return `
+<div class="acct-card">
+  <div class="acct-head">
+    <button class="collapse-btn ${open?'open':'closed'}" onclick="toggleCollapse(_acctOpen,'${a.id}')" title="${open?'Collapse':'Expand'}">▼</button>
+    <span class="acct-name">${esc(a.name)}</span>
+    <div class="btn-row">
+      <button class="btn" onclick="openFinModal('${a.id}')">💰 Finances</button>
+      <button class="btn p" onclick="openStore('${a.id}')">🏪 Store</button>
+      <button class="btn r" onclick="deleteAccount('${a.id}')">Delete</button>
+    </div>
+  </div>
+  <div class="acct-body${open?'':' collapsed'}">
+    <div class="stats">
+      <div class="stat"><div class="lbl">Money</div><div class="val">${$$(a.money)}</div></div>
+      <div class="stat"><div class="lbl">Salary / tick</div><div class="val">${$$(a.salary)}</div></div>
+      <div class="stat"><div class="lbl">Total Value</div><div class="val">${$$(totalVal)}</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px">
+      Inventory (${(a.inventory||[]).length})
+    </div>
+    ${renderInventory(a)}
+  </div>
+</div>`;
+}
+
+function invVal(it){ return pn(it.quality)*pn(it.vpq); }
+
+function renderInventory(a){
+  if(!(a.inventory||[]).length)
+    return '<div class="inv-box"><div class="empty" style="padding:18px">Inventory is empty.</div></div>';
+  const sorted=[...a.inventory].sort((x,y)=>x.name.localeCompare(y.name));
+  // We use data-desc to carry raw text, then set via JS after render to preserve newlines
+  const rows=sorted.map((it,i)=>{
+    const q=pn(it.quality), mq=pn(it.maxQuality);
+    const pct=mq>0?Math.max(0,Math.min(100,(q/mq)*100)):0;
+    const barColor=pct>60?'var(--green)':pct>30?'var(--orange)':'var(--red)';
+    const val=invVal(it);
+    const hasInst=it.instRemaining&&it.instRemaining>0;
+    const instBadge=hasInst
+      ?`<span class="inst-badge" style="margin-top:3px;display:inline-flex">📋 ${fmt(it.instRemaining)} left · ${$$(it.instMonthly)}/tick</span>`
+      :'';
+    return `
+<div class="inv-item">
+  <div class="inv-info">
+    <div class="inv-name">${esc(it.name)} ${rarityTag(it.rarity)}</div>
+    <div class="inv-type">${esc(it.type||'')}</div>
+    <div class="inv-desc" data-iid="${esc(it.iid)}"></div>
+    ${instBadge}
+    <div class="qbar-wrap">
+      <div class="qbar-bg"><div class="qbar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <span class="qlbl">${fmt(q)} / ${fmt(mq)}</span>
+    </div>
+  </div>
+  <div class="inv-right">
+    <div class="inv-val">${$$(val)}</div>
+    <div class="btn-row">
+      <button class="btn g" style="font-size:11px;padding:3px 8px" onclick="sellItem('${a.id}','${it.iid}')">Sell</button>
+      <button class="btn o" style="font-size:11px;padding:3px 8px" onclick="openTransfer('${a.id}','${it.iid}')">Transfer</button>
+      <button class="btn r" style="font-size:11px;padding:3px 8px" onclick="delInvItem('${a.id}','${it.iid}')">Del</button>
+    </div>
+  </div>
+</div>`;
+  }).join('');
+  // Store desc map for post-render injection
+  _pendingDescs={}; sorted.forEach(it=>{ _pendingDescs[it.iid]=it.desc||''; });
+  return '<div class="inv-box">'+rows+'</div>';
+}
+
+// After renderAccounts(), inject raw description text into .inv-desc nodes
+let _pendingDescs={};
+function injectDescs(){
+  document.querySelectorAll('.inv-desc[data-iid]').forEach(el=>{
+    const iid=el.getAttribute('data-iid');
+    if(iid in _pendingDescs) el.textContent=_pendingDescs[iid];
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  ADVANCE TIME
+// ═══════════════════════════════════════════════
+function advanceTime(){
+  S.accounts.forEach(a=>{
+    // 1. Salary in
+    a.money=pn(a.money)+pn(a.salary);
+    // 2. Instalment payments out
+    (a.inventory||[]).forEach(it=>{
+      if(!it.instRemaining||it.instRemaining<=0) return;
+      a.money=pn(a.money)-pn(it.instMonthly);
+      it.instRemaining=pn(it.instRemaining)-1;
+      if(it.instRemaining<=0){
+        it.instRemaining=0; it.instMonthly=null; it.instTotal=null; // fully paid off
+      }
+    });
+    // 3. Degrade all inventory items
+    (a.inventory||[]).forEach(it=>{
+      if(pn(it.quality)<=1) return;
+      if(Math.random()*100 < pn(it.ndeg)){
+        it.quality=Math.max(1, pn(it.quality)-1);
+      }
+      if(pn(it.quality)>1 && Math.random()*100 < pn(it.hdeg)){
+        it.quality=Math.max(1, Math.floor(pn(it.quality)*0.5));
+      }
+    });
+  });
+  save(); renderAll();
+  toast('⏩ Time advanced — salaries paid, instalments deducted & degradation applied.');
+}
+
+// ═══════════════════════════════════════════════
+//  SHOP CRUD
+// ═══════════════════════════════════════════════
+let _eid=null; // generic edit id
+
+function openShopModal(){ _eid=null; v('m-shop-title','New Shop'); c('s-name',''); c('s-desc',''); openM('m-shop'); }
+function editShop(id){
+  const s=S.shops.find(x=>x.id===id); if(!s) return;
+  if(s.type==='mystery'){ editMystery(id); return; }
+  _eid=id; v('m-shop-title','Edit Shop'); c('s-name',s.name); c('s-desc',s.desc||''); openM('m-shop');
+}
+function saveShop(){
+  const name=g('s-name').trim(); if(!name) return toast('Name required.');
+  if(_eid){ const s=S.shops.find(x=>x.id===_eid); if(s){s.name=name;s.desc=g('s-desc');} }
+  else S.shops.push({id:uid(),type:'shop',name,desc:g('s-desc'),enabled:true,items:[]});
+  _eid=null; closeM('m-shop'); save(); renderShops();
+}
+function toggleShop(id){ const s=S.shops.find(x=>x.id===id); if(s){s.enabled=!s.enabled;save();renderShops();} }
+function deleteShop(id){
+  if(!confirm('Delete this shop and all its items?')) return;
+  S.shops=S.shops.filter(x=>x.id!==id); save(); renderShops();
+}
+
+/* Mystery Box */
+function openMysteryModal(){ _eid=null; v('m-mystery-title','New Mystery Box'); c('mb-name',''); c('mb-desc',''); c('mb-price',''); openM('m-mystery'); }
+function editMystery(id){
+  const s=S.shops.find(x=>x.id===id); if(!s) return;
+  _eid=id; v('m-mystery-title','Edit Mystery Box'); c('mb-name',s.name); c('mb-desc',s.desc||''); c('mb-price',s.price||''); openM('m-mystery');
+}
+function saveMystery(){
+  const name=g('mb-name').trim(); if(!name) return toast('Name required.');
+  const price=pn(g('mb-price'));
+  if(_eid){ const s=S.shops.find(x=>x.id===_eid); if(s){s.name=name;s.desc=g('mb-desc');s.price=price;} }
+  else S.shops.push({id:uid(),type:'mystery',name,desc:g('mb-desc'),price,enabled:true,items:[]});
+  _eid=null; closeM('m-mystery'); save(); renderShops();
+}
+
+/* Shop Items */
+let _eshopId=null, _eitemId=null;
+function openShopItemModal(shopId){ _eshopId=shopId;_eitemId=null; v('m-sitem-title','New Item'); clearItemForm('si'); openM('m-sitem'); }
+function openMysteryItemModal(shopId){ _eshopId=shopId;_eitemId=null; v('m-mitem-title','New Mystery Item'); clearItemForm('mi'); openM('m-mitem'); }
+
+function clearItemForm(p){
+  ['name','type','desc','maxq','vpq','ndeg','hdeg'].forEach(k=>c(p+'-'+k,''));
+  c(p+'-rarity','Common');
+  if(p==='si'){ c('si-price',''); c('si-itotal',''); c('si-imonths',''); }
+  if(p==='mi') c('mi-chance','');
+}
+
+function editItem(shopId, itemId){
+  const s=S.shops.find(x=>x.id===shopId); if(!s) return;
+  const it=s.items.find(x=>x.id===itemId); if(!it) return;
+  _eshopId=shopId; _eitemId=itemId;
+  if(s.type==='shop'){
+    v('m-sitem-title','Edit Item');
+    c('si-name',it.name); c('si-type',it.type||''); c('si-rarity',it.rarity||'Common');
+    c('si-desc',it.desc||''); c('si-price',it.price||''); c('si-maxq',it.maxQuality||'');
+    c('si-vpq',it.vpq||''); c('si-ndeg',it.ndeg||''); c('si-hdeg',it.hdeg||'');
+    c('si-itotal',it.installTotal||''); c('si-imonths',it.installMonths||'');
+    openM('m-sitem');
+  } else {
+    v('m-mitem-title','Edit Mystery Item');
+    c('mi-name',it.name); c('mi-type',it.type||''); c('mi-rarity',it.rarity||'Common');
+    c('mi-desc',it.desc||''); c('mi-chance',it.chance||''); c('mi-maxq',it.maxQuality||'');
+    c('mi-vpq',it.vpq||''); c('mi-ndeg',it.ndeg||''); c('mi-hdeg',it.hdeg||'');
+    openM('m-mitem');
+  }
+}
+
+function saveShopItem(){
+  const name=g('si-name').trim(); if(!name) return toast('Name required.');
+  const s=S.shops.find(x=>x.id===_eshopId); if(!s) return;
+  const installTotal=pn(g('si-itotal'));
+  const installMonths=Math.max(1,pn(g('si-imonths'))||12);
+  const data={
+    name, type:g('si-type').trim(), rarity:g('si-rarity'), desc:g('si-desc'),
+    price:pn(g('si-price')), maxQuality:pn(g('si-maxq'))||10,
+    vpq:pn(g('si-vpq')), ndeg:pn(g('si-ndeg')), hdeg:pn(g('si-hdeg')), enabled:true,
+    installTotal: installTotal||null,
+    installMonths: installTotal ? installMonths : null
+  };
+  if(_eitemId){
+    const idx=s.items.findIndex(x=>x.id===_eitemId);
+    if(idx>=0){ s.items[idx]={...s.items[idx],...data}; propagate(s.id,_eitemId,data); }
+  } else { s.items.push({id:uid(),...data}); }
+  _eitemId=null; closeM('m-sitem'); save(); renderAll();
+}
+
+function saveMysteryItem(){
+  const name=g('mi-name').trim(); if(!name) return toast('Name required.');
+  const s=S.shops.find(x=>x.id===_eshopId); if(!s) return;
+  const data={
+    name, type:g('mi-type').trim(), rarity:g('mi-rarity'), desc:g('mi-desc'),
+    chance:pn(g('mi-chance')), maxQuality:pn(g('mi-maxq'))||10,
+    vpq:pn(g('mi-vpq')), ndeg:pn(g('mi-ndeg')), hdeg:pn(g('mi-hdeg'))
+  };
+  if(_eitemId){
+    const idx=s.items.findIndex(x=>x.id===_eitemId);
+    if(idx>=0){ s.items[idx]={...s.items[idx],...data}; propagate(s.id,_eitemId,data); }
+  } else { s.items.push({id:uid(),...data}); }
+  _eitemId=null; closeM('m-mitem'); save(); renderAll();
+}
+
+// Propagate item edits to all inventories
+function propagate(shopId, itemId, data){
+  S.accounts.forEach(a=>{
+    (a.inventory||[]).forEach(inv=>{
+      if(inv.shopId===shopId && inv.itemId===itemId){
+        inv.name=data.name; inv.type=data.type; inv.rarity=data.rarity;
+        inv.desc=data.desc; inv.vpq=data.vpq; inv.maxQuality=data.maxQuality;
+        inv.ndeg=data.ndeg; inv.hdeg=data.hdeg;
+      }
+    });
+  });
+}
+
+function toggleItem(shopId, itemId){
+  const s=S.shops.find(x=>x.id===shopId); if(!s) return;
+  const it=s.items.find(x=>x.id===itemId); if(!it) return;
+  it.enabled=(it.enabled===false)?true:false;
+  save(); renderShops();
+}
+function deleteItem(shopId, itemId){
+  if(!confirm('Delete this item?')) return;
+  const s=S.shops.find(x=>x.id===shopId); if(!s) return;
+  s.items=s.items.filter(x=>x.id!==itemId); save(); renderShops();
+}
+
+// ═══════════════════════════════════════════════
+//  ACCOUNTS CRUD
+// ═══════════════════════════════════════════════
+function openAccountModal(){ v('m-acct-title','New Account'); c('ac-name',''); c('ac-money',''); c('ac-salary',''); openM('m-acct'); }
+function saveAccount(){
+  const name=g('ac-name').trim(); if(!name) return toast('Name required.');
+  S.accounts.push({id:uid(),name,money:pn(g('ac-money')),salary:pn(g('ac-salary')),inventory:[]});
+  closeM('m-acct'); save(); renderAccounts();
+}
+function deleteAccount(id){
+  if(!confirm('Delete this account and its inventory?')) return;
+  S.accounts=S.accounts.filter(x=>x.id!==id); save(); renderAccounts();
+}
+
+/* Finances */
+let _finId=null;
+function openFinModal(id){
+  _finId=id;
+  const a=S.accounts.find(x=>x.id===id); if(!a) return;
+  c('fin-adj',''); c('fin-salary',a.salary||0); openM('m-fin');
+}
+function adjMoney(sign){
+  const val=pn(g('fin-adj')); if(!val) return toast('Enter an amount.');
+  const a=S.accounts.find(x=>x.id===_finId); if(!a) return;
+  a.money=pn(a.money)+(sign*val);
+  save(); renderAccounts();
+  toast(sign>0?`+ ${$$(val)} added`:`− ${$$(val)} subtracted`);
+}
+function saveSalary(){
+  const val=pn(g('fin-salary'));
+  const a=S.accounts.find(x=>x.id===_finId); if(!a) return;
+  a.salary=val; closeM('m-fin'); save(); renderAccounts();
+  toast('Salary updated to '+$$(val));
+}
+
+// ═══════════════════════════════════════════════
+//  STORE
+// ═══════════════════════════════════════════════
+let _storeAcctId=null;
+function openStore(id){ _storeAcctId=id; buildStore(); openM('m-store'); }
+
+function buildStore(){
+  const el=document.getElementById('store-body');
+  const a=S.accounts.find(x=>x.id===_storeAcctId);
+  const active=[...S.shops].filter(x=>x.enabled).reverse();
+  if(!active.length){ el.innerHTML='<div class="empty">No active shops or mystery boxes.</div>'; return; }
+  let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:12px">Your money: <strong>${$$(a?a.money:0)}</strong></div>`;
+  active.forEach(s=>{
+    if(s.type==='shop'){
+      const vis=[...s.items].filter(it=>it.enabled!==false).reverse();
+      h+=`<div class="store-group"><div class="store-group-title">${esc(s.name)}<span style="font-size:11px;font-weight:400;color:var(--txt2)">${esc(s.desc||'')}</span></div>`;
+      if(!vis.length){ h+='<div style="font-size:12px;color:var(--txt3);padding:5px 0">No items available.</div>'; }
+      else vis.forEach(it=>{
+        const disc=pn(it.price)*0.8;
+        const hasInst=it.installTotal&&it.installMonths;
+        const monthly=hasInst?pn(it.installTotal)/pn(it.installMonths):0;
+        const acct=S.accounts.find(x=>x.id===_storeAcctId);
+        const canInst=hasInst&&acct&&pn(acct.salary)>=monthly;
+        const instBtn=hasInst?`<button class="btn${canInst?'':' r'}" style="font-size:11px;padding:3px 9px" onclick="buyInstalment('${s.id}','${it.id}')" title="${canInst?'Pay '+fmt(it.installMonths)+' × '+$$(monthly):'Salary too low (need '+$$(monthly)+'/tick)'}">📋 ${fmt(it.installMonths)}× ${$$(monthly)}${canInst?'':' ⚠️'}</button>`:'';
+        h+=`<div class="store-item">
+          <div class="store-item-info">
+            <div class="store-item-name">${esc(it.name)} ${rarityTag(it.rarity)}</div>
+            <div class="store-item-meta">${esc(it.type||'')} · Max Q: ${fmt(it.maxQuality)} · VPQ: ${$$(it.vpq)}</div>
+            ${hasInst?`<div class="store-item-meta" style="color:#2471a3">Installment: ${$$(it.installTotal)} total · ${fmt(it.installMonths)} payments · ${$$(monthly)}/tick</div>`:''}
+            <div class="store-item-meta">${esc(it.desc||'')}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+            <div style="font-size:14px;font-weight:700">${$$(it.price)}</div>
+            <div class="btn-row">
+              <button class="btn p" style="font-size:11px;padding:3px 9px" onclick="buyFull('${s.id}','${it.id}')">Full Price</button>
+              <button class="btn o" style="font-size:11px;padding:3px 9px" onclick="buyDisc('${s.id}','${it.id}')" title="20% off — random quality">${$$(disc)} (−20%)</button>
+              ${instBtn}
+            </div>
+          </div>
+        </div>`;
+      });
+      h+='</div>';
+    } else {
+      h+=`<div class="store-group"><div class="store-group-title">${esc(s.name)} <span class="tag">Mystery Box</span><span style="font-size:11px;font-weight:400;color:var(--txt2)">&nbsp;${esc(s.desc||'')}</span></div>`;
+      h+=`<div style="font-size:13px;margin-bottom:8px">Price: <strong>${$$(s.price)}</strong> — Opens for a random item.</div>`;
+      if(s.items.length){
+        h+=`<div style="font-size:11px;color:var(--txt3);margin-bottom:6px">Item pool:</div>`;
+        [...s.items].reverse().forEach(it=>{ h+=`<div style="font-size:12px;color:var(--txt2);padding:2px 0">${rarityTag(it.rarity)} ${esc(it.name)} — ${fmt(it.chance)}% chance</div>`; });
+      }
+      h+=`<div style="margin-top:10px"><button class="btn p" onclick="buyBox('${s.id}')">Open Box (${$$(s.price)})</button></div>`;
+      h+='</div>';
+    }
+  });
+  el.innerHTML=h;
+}
+
+function buyFull(shopId,itemId){
+  const a=S.accounts.find(x=>x.id===_storeAcctId);
+  const s=S.shops.find(x=>x.id===shopId);
+  const it=s&&s.items.find(x=>x.id===itemId);
+  if(!a||!it) return;
+  if(pn(a.money)<pn(it.price)) return toast('Not enough money!');
+  a.money=pn(a.money)-pn(it.price);
+  addToInventory(a,s,it,pn(it.maxQuality),null);
+  save(); buildStore(); renderAccounts();
+  toast(`Bought ${it.name} at max quality (${fmt(it.maxQuality)}) for ${$$(it.price)}`);
+}
+function buyDisc(shopId,itemId){
+  const a=S.accounts.find(x=>x.id===_storeAcctId);
+  const s=S.shops.find(x=>x.id===shopId);
+  const it=s&&s.items.find(x=>x.id===itemId);
+  if(!a||!it) return;
+  const price=pn(it.price)*0.8;
+  if(pn(a.money)<price) return toast('Not enough money!');
+  const q=Math.max(1,Math.ceil(Math.random()*pn(it.maxQuality)));
+  a.money=pn(a.money)-price;
+  addToInventory(a,s,it,q,null);
+  save(); buildStore(); renderAccounts();
+  toast(`Bought ${it.name} (Q: ${fmt(q)} / ${fmt(it.maxQuality)}) for ${$$(price)}`);
+}
+function buyInstalment(shopId,itemId){
+  const a=S.accounts.find(x=>x.id===_storeAcctId);
+  const s=S.shops.find(x=>x.id===shopId);
+  const it=s&&s.items.find(x=>x.id===itemId);
+  if(!a||!it||!it.installTotal||!it.installMonths) return;
+  const monthly=pn(it.installTotal)/pn(it.installMonths);
+  if(pn(a.salary)<monthly) return toast(`Salary too low! Need at least ${$$(monthly)}/tick.`);
+  // Item arrives immediately at full max quality, payments begin next tick
+  addToInventory(a,s,it,pn(it.maxQuality),{
+    monthly, remaining:pn(it.installMonths), total:pn(it.installTotal)
+  });
+  save(); buildStore(); renderAccounts();
+  toast(`📋 Instalment started: ${it.name} — ${fmt(it.installMonths)} × ${$$(monthly)}/tick`);
+}
+function buyBox(shopId){
+  const a=S.accounts.find(x=>x.id===_storeAcctId);
+  const s=S.shops.find(x=>x.id===shopId);
+  if(!a||!s) return;
+  if(pn(a.money)<pn(s.price)) return toast('Not enough money!');
+  if(!s.items.length) return toast('This box has no items configured!');
+  const roll=Math.random()*100;
+  let cum=0, won=null;
+  for(const it of s.items){ cum+=pn(it.chance); if(roll<cum){won=it;break;} }
+  a.money=pn(a.money)-pn(s.price);
+  if(!won){ save(); buildStore(); renderAccounts(); return toast(`Opened ${s.name} — No item won this time.`); }
+  const q=Math.max(1,Math.ceil(Math.random()*pn(won.maxQuality)));
+  addToInventory(a,s,won,q,null);
+  save(); buildStore(); renderAccounts();
+  toast(`🎁 Got: ${won.name} ${won.rarity} (Q: ${fmt(q)}) from ${s.name}!`);
+}
+
+function addToInventory(a,s,it,quality,instalment){
+  (a.inventory=a.inventory||[]).push({
+    iid:uid(), shopId:s.id, itemId:it.id,
+    name:it.name, type:it.type||'', rarity:it.rarity||'Common', desc:it.desc||'',
+    quality, maxQuality:pn(it.maxQuality),
+    vpq:pn(it.vpq), ndeg:pn(it.ndeg), hdeg:pn(it.hdeg),
+    // installment tracking (null = fully owned)
+    instMonthly: instalment?instalment.monthly:null,
+    instRemaining: instalment?instalment.remaining:null,
+    instTotal: instalment?instalment.total:null
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  INVENTORY ACTIONS
+// ═══════════════════════════════════════════════
+function sellItem(acctId,iid){
+  const a=S.accounts.find(x=>x.id===acctId); if(!a) return;
+  const it=(a.inventory||[]).find(x=>x.iid===iid); if(!it) return;
+  const val=invVal(it);
+  const hasInst=it.instRemaining&&it.instRemaining>0;
+  const remainingDebt=hasInst?pn(it.instRemaining)*pn(it.instMonthly):0;
+  const proceeds=val-remainingDebt;
+  const msg=hasInst
+    ?`Sell "${it.name}" for ${$$(val)}?\n\nRemaining instalment debt: ${$$(remainingDebt)} (${fmt(it.instRemaining)} × ${$$(it.instMonthly)}) will be paid off.\nNet proceeds: ${$$(proceeds)}`
+    :`Sell "${it.name}" for ${$$(val)}?`;
+  if(!confirm(msg)) return;
+  a.money=pn(a.money)+proceeds;
+  a.inventory=a.inventory.filter(x=>x.iid!==iid);
+  save(); renderAccounts();
+  toast(hasInst?`Sold ${it.name}: ${$$(val)} − ${$$(remainingDebt)} debt = ${$$(proceeds)}`:`Sold ${it.name} for ${$$(val)}`);
+}
+function delInvItem(acctId,iid){
+  const a=S.accounts.find(x=>x.id===acctId); if(!a) return;
+  if(!confirm('Delete this item from inventory?')) return;
+  a.inventory=a.inventory.filter(x=>x.iid!==iid);
+  save(); renderAccounts(); toast('Item removed.');
+}
+
+let _trFrom=null, _trIid=null;
+function openTransfer(acctId,iid){
+  _trFrom=acctId; _trIid=iid;
+  const a=S.accounts.find(x=>x.id===acctId);
+  const it=(a?.inventory||[]).find(x=>x.iid===iid); if(!it) return;
+  document.getElementById('tr-item-name').textContent=it.name;
+  const others=S.accounts.filter(x=>x.id!==acctId);
+  document.getElementById('tr-accts').innerHTML=others.length
+    ? others.map(o=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--brd)">
+          <span style="font-size:13px;font-weight:600">${esc(o.name)}</span>
+          <button class="btn p" onclick="doTransfer('${o.id}')">Send</button>
+        </div>`).join('')
+    : '<div style="color:var(--txt3);font-size:13px">No other accounts exist.</div>';
+  openM('m-transfer');
+}
+function doTransfer(toId){
+  const from=S.accounts.find(x=>x.id===_trFrom);
+  const to=S.accounts.find(x=>x.id===toId);
+  if(!from||!to) return;
+  const idx=from.inventory.findIndex(x=>x.iid===_trIid); if(idx<0) return;
+  const item=from.inventory[idx];
+  const hasInst=item.instRemaining&&item.instRemaining>0;
+  if(hasInst){
+    const debt=pn(item.instRemaining)*pn(item.instMonthly);
+    if(!confirm(`"${item.name}" still has ${fmt(item.instRemaining)} payments left (${$$(debt)} total debt).\nThe instalment will transfer to ${to.name} and deduct from their money each tick.\nContinue?`)) return;
+  }
+  from.inventory.splice(idx,1);
+  (to.inventory=to.inventory||[]).push(item);
+  closeM('m-transfer'); save(); renderAccounts();
+  toast(`Transferred ${item.name} → ${to.name}${hasInst?' (instalment debt included)':''}`);
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL UTILS
+// ═══════════════════════════════════════════════
+function openM(id){ document.getElementById(id).classList.remove('h'); }
+function closeM(id){ document.getElementById(id).classList.add('h'); }
+document.querySelectorAll('.ov').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.add('h'); });
+});
+
+// ═══════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════
+function g(id){ return document.getElementById(id)?.value||''; }
+function c(id,val){ const el=document.getElementById(id); if(el) el.value=val; }
+function v(id,txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
+
+let _tt=null;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+load();
+renderAll();
+</script>
+</body>
+</html>
