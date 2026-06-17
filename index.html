@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Market Sim</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--s1:#f7f7f8;--s2:#eeeef0;
+  --b1:#e6e6e8;--b2:#c8c8cc;
+  --t1:#111;--t2:#666;--t3:#bbb;
+  --grn:#1a8a4a;--red:#c0392b;--orn:#c96a00;--blu:#1a6fa8;
+  --r:6px;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--s1);color:var(--t1);font-size:13px;min-height:100vh}
+#hdr{background:var(--t1);color:#fff;padding:0 24px;display:flex;align-items:center;gap:16px;height:50px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+#hdr h1{font-size:14px;font-weight:800;letter-spacing:.3px;color:#fff;white-space:nowrap}
+.tab{padding:4px 14px;border:1px solid rgba(255,255,255,.25);border-radius:20px;background:transparent;cursor:pointer;font-size:11px;font-weight:700;color:rgba(255,255,255,.6);transition:all .15s;letter-spacing:.2px}
+.tab.on,.tab:hover{background:#fff;color:var(--t1);border-color:#fff}
+#time-btn{margin-left:auto;padding:6px 18px;background:#fff;color:var(--t1);border:none;border-radius:var(--r);font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.3px;white-space:nowrap}
+#time-btn:hover{background:#f0f0f0}
+main{max-width:840px;margin:0 auto;padding:20px 16px}
+.view{display:none}.view.on{display:block}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-hd h2{font-size:12px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px}
+.panel{background:var(--bg);border:1px solid var(--b1);border-radius:8px;margin-bottom:8px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.ph{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--b1);background:var(--bg)}
+.ph.click{cursor:pointer;user-select:none}.ph.click:hover{background:var(--s1)}
+.ph-title{font-weight:700;font-size:13px;flex:1;min-width:0}
+.ph-sub{font-size:11px;color:var(--t2);margin-top:2px}
+.pb{padding:14px}.pb.h{display:none}
+.chev{font-size:10px;color:var(--t3);transition:transform .18s;flex-shrink:0;width:14px;text-align:center}
+.chev.open{transform:rotate(0deg)}.chev.shut{transform:rotate(-90deg)}
+.btn{display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border-radius:var(--r);border:1px solid var(--b2);background:var(--bg);cursor:pointer;font-size:11px;font-weight:600;color:var(--t1);transition:background .1s,border-color .1s;white-space:nowrap;line-height:1.5}
+.btn:hover{background:var(--s2)}.btn:disabled{opacity:.35;cursor:default;pointer-events:none}
+.btn.pri{background:var(--t1);color:#fff;border-color:var(--t1)}.btn.pri:hover{opacity:.87}
+.btn.grn{border-color:var(--grn);color:var(--grn)}.btn.grn:hover{background:#edf7f1}
+.btn.red{border-color:var(--red);color:var(--red)}.btn.red:hover{background:#fdf0ed}
+.btn.orn{border-color:var(--orn);color:var(--orn)}.btn.orn:hover{background:#fef5ec}
+.btn.blu{border-color:var(--blu);color:var(--blu)}.btn.blu:hover{background:#eaf3fb}
+.brow{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid var(--b1);background:var(--s2);color:var(--t2);vertical-align:middle;line-height:1.6}
+.tag.on{background:#e6f7ee;border-color:#9dd6b5;color:var(--grn)}
+.tag.off{background:#fdf0ed;border-color:#f1c0b8;color:var(--red)}
+.tag.C{color:#999;border-color:#ddd;background:#fafafa}
+.tag.U{color:var(--grn);border-color:#9dd6b5;background:#edf7f1}
+.tag.R{color:var(--blu);border-color:#9dc4e8;background:#eaf3fb}
+.tag.E{color:#8e44ad;border-color:#c5a0d9;background:#f5edfb}
+.tag.L{color:var(--orn);border-color:#f0b97a;background:#fef5ec}
+.tag.V{color:#6c3483;border-color:#c39bd3;background:#f5eef8}
+.tag.INST{background:#eaf3fb;border-color:#9dc4e8;color:var(--blu);font-size:9px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:500;padding:14px}
+.ov.h{display:none}
+.ov.z-top{z-index:600}
+.modal{background:var(--bg);border-radius:10px;padding:20px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+.modal-hd{font-size:14px;font-weight:800;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--b1)}
+.fld{margin-bottom:10px}
+.fld label{display:block;font-size:10px;font-weight:700;color:var(--t2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.fld input,.fld select,.fld textarea{width:100%;padding:7px 10px;border:1px solid var(--b2);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--t1);font-family:inherit;transition:border-color .12s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--t1)}
+.fld textarea{resize:vertical;min-height:54px}
+.frow{display:flex;gap:8px}.frow .fld{flex:1}
+.mfoot{display:flex;gap:7px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--b1)}
+.msec{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--b1)}
+.hint{font-size:10px;color:var(--t3);margin-top:3px;line-height:1.5}
+.irow{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start}
+.irow:last-child{margin-bottom:0}
+.ir-info{flex:1;min-width:0}
+.ir-name{font-weight:700;font-size:12px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ir-meta{font-size:10px;color:var(--t2);margin-top:3px;line-height:1.6}
+.ir-acts{display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:1px;background:var(--b1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.stat{background:var(--bg);padding:9px 12px}
+.stat .lbl{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px}
+.stat .val{font-size:15px;font-weight:800;margin-top:3px;line-height:1}
+.stat .val.red{color:var(--red)}
+.itabs{display:flex;background:var(--s1);border-bottom:1px solid var(--b1)}
+.itab{flex:1;padding:8px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--t2);cursor:pointer;border-right:1px solid var(--b1);transition:all .12s}
+.itab:last-child{border-right:none}
+.itab.on{background:var(--bg);color:var(--t1)}
+.itab:hover:not(.on){background:var(--s2)}
+.ipanel{display:none;max-height:340px;overflow-y:auto}.ipanel.on{display:block}
+.inv-item{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-bottom:1px solid var(--b1);height:140px}
+.inv-item:last-child{border-bottom:none}
+.ii-l{flex:1;min-width:0;display:flex;flex-direction:column;height:100%;overflow:hidden}
+.ii-name{font-weight:700;font-size:12px;flex-shrink:0;display:flex;align-items:center;gap:4px;flex-wrap:wrap;line-height:1.4}
+.ii-type{font-size:10px;color:var(--t2);margin-top:1px;flex-shrink:0}
+.ii-desc{font-size:10px;color:var(--t2);margin-top:3px;white-space:pre-wrap;word-break:break-word;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;line-height:1.5}
+.ii-desc::-webkit-scrollbar{width:2px}.ii-desc::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.ii-foot{flex-shrink:0;margin-top:5px}
+.qbar{display:flex;align-items:center;gap:6px}
+.qbar-bg{flex:1;height:3px;background:var(--s2);border-radius:2px;overflow:hidden}
+.qbar-fill{height:100%;border-radius:2px;transition:width .25s}
+.qlbl{font-size:10px;color:var(--t2);white-space:nowrap}
+.ii-r{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;height:100%;flex-shrink:0}
+.ii-val{font-size:13px;font-weight:800;white-space:nowrap}
+.ii-btns{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}
+.lr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1)}
+.lr:last-child{border-bottom:none}
+.lr-info{flex:1;min-width:0}
+.lr-name{font-weight:700;font-size:12px}
+.lr-meta{font-size:10px;color:var(--t2);margin-top:2px}
+.lr-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.lr-price{font-size:13px;font-weight:800;white-space:nowrap}
+.lr-price.red{color:var(--red)}
+.store-sec{margin-bottom:14px}
+.store-sec-hd{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);padding:5px 0 6px;border-bottom:1px solid var(--b1);margin-bottom:8px;display:flex;align-items:baseline;gap:6px}
+.store-sec-hd span{font-weight:400;text-transform:none;font-size:11px;color:var(--t3)}
+.srow{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);margin-bottom:5px}
+.srow:last-child{margin-bottom:0}
+.sr-info{flex:1;min-width:0}
+.sr-name{font-weight:700;font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.sr-meta{font-size:10px;color:var(--t2);margin-top:2px;line-height:1.5}
+.sr-r{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.sr-price{font-size:13px;font-weight:800;white-space:nowrap}
+.vopt{padding:9px 12px;border:1px solid var(--b2);border-radius:var(--r);cursor:pointer;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;transition:border-color .12s,background .12s}
+.vopt:hover{border-color:var(--t1);background:var(--s1)}
+.vn{font-weight:700;font-size:12px}.vd{font-size:11px;color:var(--t2)}
+#toast{position:fixed;bottom:18px;right:18px;background:var(--t1);color:#fff;padding:9px 15px;border-radius:var(--r);font-size:12px;z-index:9999;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none;max-width:300px;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+#toast.show{opacity:1;transform:translateY(0)}
+.empty{text-align:center;padding:22px;color:var(--t3);font-size:12px}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <h1>Market Sim</h1>
+  <div class="brow">
+    <button class="tab on" onclick="switchTab('create')">Create</button>
+    <button class="tab" onclick="switchTab('play')">Play</button>
+  </div>
+  <button id="time-btn" onclick="advanceTime()">&#9193; Advance Time</button>
+</div>
+<main>
+  <div id="v-create" class="view on">
+    <div class="sec-hd"><h2>Shops &amp; Mystery Boxes</h2>
+      <div class="brow">
+        <button class="btn pri" onclick="openShopModal()">+ Shop</button>
+        <button class="btn pri" onclick="openMysteryModal()">+ Mystery Box</button>
+      </div>
+    </div>
+    <div id="shops-list"></div>
+  </div>
+  <div id="v-play" class="view">
+    <div class="sec-hd"><h2>Accounts</h2>
+      <button class="btn pri" onclick="openAccountModal()">+ Account</button>
+    </div>
+    <div id="accounts-list"></div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<div id="m-shop" class="ov h"><div class="modal">
+  <div class="modal-hd" id="m-shop-t">New Shop</div>
+  <div class="fld"><label>Name</label><input id="s-name" type="text" placeholder="Shop name"></div>
+  <div class="fld"><label>Description</label><textarea id="s-desc" placeholder="Optional"></textarea></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-shop')">Cancel</button><button class="btn pri" onclick="saveShop()">Save</button></div>
+</div></div>
+
+<div id="m-mystery" class="ov h"><div class="modal">
+  <div class="modal-hd" id="m-mystery-t">New Mystery Box</div>
+  <div class="fld"><label>Name</label><input id="mb-name" type="text" placeholder="Box name"></div>
+  <div class="fld"><label>Description</label><textarea id="mb-desc" placeholder="Optional"></textarea></div>
+  <div class="fld"><label>Price</label><input id="mb-price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-mystery')">Cancel</button><button class="btn pri" onclick="saveMystery()">Save</button></div>
+</div></div>
+
+<div id="m-sitem" class="ov h"><div class="modal" style="max-width:520px">
+  <div class="modal-hd" id="m-sitem-t">New Item</div>
+  <div class="frow">
+    <div class="fld"><label>Name</label><input id="si-name" type="text" placeholder="Item name"></div>
+    <div class="fld"><label>Type</label><input id="si-type" type="text" placeholder="e.g. Weapon"></div>
+  </div>
+  <div class="frow">
+    <div class="fld"><label>Rarity</label><select id="si-rarity"><option>Common</option><option>Uncommon</option><option>Rare</option><option>Epic</option><option>Legendary</option></select></div>
+    <div class="fld"><label>Price</label><input id="si-price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  </div>
+  <div class="fld"><label>Description</label><textarea id="si-desc" placeholder="Optional"></textarea></div>
+  <div class="frow">
+    <div class="fld"><label>Max Quality</label><input id="si-maxq" type="number" min="1" step="1" placeholder="10"></div>
+    <div class="fld"><label>Value / Quality Pt</label><input id="si-vpq" type="number" min="0" step="0.01" placeholder="2.00"></div>
+    <div class="fld"><label>Max Repairs</label><input id="si-maxrep" type="number" min="0" step="1" placeholder="0"></div>
+  </div>
+  <div class="frow">
+    <div class="fld"><label>Natural Degrade %</label><input id="si-ndeg" type="number" min="0" max="100" step="0.01" placeholder="50"></div>
+    <div class="fld"><label>High Degrade %</label><input id="si-hdeg" type="number" min="0" max="100" step="0.01" placeholder="10"></div>
+  </div>
+  <div class="msec">Instalment Option</div>
+  <div class="frow">
+    <div class="fld"><label>Total Price</label><input id="si-itotal" type="number" min="0" step="0.01" placeholder="Leave blank to disable"></div>
+    <div class="fld"><label>Number of Payments</label><input id="si-imonths" type="number" min="1" step="1" placeholder="12"></div>
+  </div>
+  <div class="hint">Payment = total / payments. Account salary must be >= payment/tick to qualify.</div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-sitem')">Cancel</button><button class="btn pri" onclick="saveShopItem()">Save</button></div>
+</div></div>
+
+<div id="m-mitem" class="ov h"><div class="modal" style="max-width:520px">
+  <div class="modal-hd" id="m-mitem-t">New Mystery Item</div>
+  <div class="frow">
+    <div class="fld"><label>Name</label><input id="mi-name" type="text" placeholder="Item name"></div>
+    <div class="fld"><label>Type</label><input id="mi-type" type="text" placeholder="e.g. Weapon"></div>
+  </div>
+  <div class="frow">
+    <div class="fld"><label>Rarity</label><select id="mi-rarity"><option>Common</option><option>Uncommon</option><option>Rare</option><option>Epic</option><option>Legendary</option></select></div>
+    <div class="fld"><label>Drop Chance (0-100%)</label><input id="mi-chance" type="number" min="0" max="100" step="0.01" placeholder="25"></div>
+  </div>
+  <div class="fld"><label>Description</label><textarea id="mi-desc" placeholder="Optional"></textarea></div>
+  <div class="frow">
+    <div class="fld"><label>Max Quality</label><input id="mi-maxq" type="number" min="1" step="1" placeholder="10"></div>
+    <div class="fld"><label>Value / Quality Pt</label><input id="mi-vpq" type="number" min="0" step="0.01" placeholder="2.00"></div>
+    <div class="fld"><label>Max Repairs</label><input id="mi-maxrep" type="number" min="0" step="1" placeholder="0"></div>
+  </div>
+  <div class="frow">
+    <div class="fld"><label>Natural Degrade %</label><input id="mi-ndeg" type="number" min="0" max="100" step="0.01" placeholder="50"></div>
+    <div class="fld"><label>High Degrade %</label><input id="mi-hdeg" type="number" min="0" max="100" step="0.01" placeholder="10"></div>
+  </div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-mitem')">Cancel</button><button class="btn pri" onclick="saveMysteryItem()">Save</button></div>
+</div></div>
+
+<div id="m-variant" class="ov h"><div class="modal" style="max-width:400px">
+  <div class="modal-hd" id="m-variant-t">New Variant</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:12px" id="m-variant-sub"></div>
+  <div class="fld"><label>Variant Name</label><input id="vr-name" type="text" placeholder="e.g. Fresh, Old, Mint"></div>
+  <div class="fld"><label>Price Adjustment</label>
+    <div style="display:flex;gap:6px">
+      <select id="vr-sign" style="width:110px;padding:7px 10px;border:1px solid var(--b2);border-radius:var(--r);font-size:12px"><option value="1">+ Add</option><option value="-1">- Subtract</option></select>
+      <input id="vr-delta" type="number" min="0" step="0.01" placeholder="100.00" style="flex:1;padding:7px 10px;border:1px solid var(--b2);border-radius:var(--r);font-size:12px">
+    </div>
+    <div class="hint">Also adjusts VPQ: delta / max quality. VPQ floored at $0.</div>
+  </div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-variant')">Cancel</button><button class="btn pri" onclick="saveVariant()">Save</button></div>
+</div></div>
+
+<div id="m-vpick" class="ov h z-top"><div class="modal" style="max-width:420px">
+  <div class="modal-hd" id="vpick-t">Choose a Variant</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:12px" id="vpick-sub"></div>
+  <div id="vpick-opts"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-vpick')">Cancel</button></div>
+</div></div>
+
+<div id="m-acct" class="ov h"><div class="modal" style="max-width:400px">
+  <div class="modal-hd">New Account</div>
+  <div class="fld"><label>Name</label><input id="ac-name" type="text" placeholder="Account name"></div>
+  <div class="frow">
+    <div class="fld"><label>Starting Money</label><input id="ac-money" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="fld"><label>Salary / tick</label><input id="ac-salary" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  </div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-acct')">Cancel</button><button class="btn pri" onclick="saveAccount()">Save</button></div>
+</div></div>
+
+<div id="m-fin" class="ov h"><div class="modal" style="max-width:380px">
+  <div class="modal-hd">Finances</div>
+  <div class="fld"><label>Adjust Money</label>
+    <div style="display:flex;gap:6px">
+      <input id="fin-adj" type="number" min="0" step="0.01" placeholder="Amount" style="flex:1;padding:7px 10px;border:1px solid var(--b2);border-radius:var(--r);font-size:12px">
+      <button class="btn grn" onclick="adjMoney(1)">+ Add</button>
+      <button class="btn red" onclick="adjMoney(-1)">- Sub</button>
+    </div>
+  </div>
+  <div class="fld"><label>Set Salary / tick</label><input id="fin-salary" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-fin')">Cancel</button><button class="btn pri" onclick="saveSalary()">Update Salary</button></div>
+</div></div>
+
+<div id="m-store" class="ov h"><div class="modal" style="max-width:560px">
+  <div class="modal-hd">Store</div>
+  <div id="store-body"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-store')">Close</button></div>
+</div></div>
+
+<div id="m-transfer" class="ov h"><div class="modal" style="max-width:360px">
+  <div class="modal-hd">Transfer Item</div>
+  <p style="font-size:11px;color:var(--t2);margin-bottom:12px">Send <strong id="tr-item-name"></strong> to:</p>
+  <div id="tr-accts"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-transfer')">Cancel</button></div>
+</div></div>
+
+<div id="m-repair" class="ov h"><div class="modal" style="max-width:400px">
+  <div class="modal-hd">Repair Item</div>
+  <div id="repair-body"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-repair')">Cancel</button><button class="btn pri" onclick="confirmRepair()">Repair</button></div>
+</div></div>
+
+<div id="m-list" class="ov h"><div class="modal" style="max-width:360px">
+  <div class="modal-hd">List Item for Sale</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:10px" id="list-sub"></div>
+  <div class="fld"><label>Asking Price</label><input id="list-price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  <div class="hint">Item moves to your Listings tab. Buyers pay you directly. Degradation continues while listed.</div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-list')">Cancel</button><button class="btn pri" onclick="confirmList()">List</button></div>
+</div></div>
+
+<div id="m-loan" class="ov h"><div class="modal" style="max-width:440px">
+  <div class="modal-hd">Take a Loan</div>
+  <div class="fld"><label>Label (optional)</label><input id="ln-label" type="text" placeholder="e.g. Car loan, House mortgage"></div>
+  <div class="frow">
+    <div class="fld"><label>Principal (borrowed)</label><input id="ln-principal" type="number" min="0" step="0.01" placeholder="1000.00"></div>
+    <div class="fld"><label>Interest Rate % / tick</label><input id="ln-rate" type="number" min="0" step="0.01" placeholder="2"></div>
+  </div>
+  <div class="fld"><label>Interest Type</label>
+    <select id="ln-type"><option value="simple">Simple - fixed on original principal</option><option value="compound">Compound - on remaining balance</option></select>
+  </div>
+  <div class="frow">
+    <div class="fld"><label>Min Payment / tick</label><input id="ln-payment" type="number" min="0" step="0.01" placeholder="50.00"></div>
+    <div class="fld"><label>Down Payment (optional)</label><input id="ln-extra" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  </div>
+  <div class="hint">Principal added to cash now. Each tick: interest accrues, then min payment deducts automatically.</div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-loan')">Cancel</button><button class="btn pri" onclick="saveLoan()">Take Loan</button></div>
+</div></div>
+
+<div id="m-loan-pay" class="ov h z-top"><div class="modal" style="max-width:340px">
+  <div class="modal-hd">Pay Extra on Loan</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:12px" id="lp-sub"></div>
+  <div class="fld"><label>Amount to Pay Now</label><input id="lp-amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-loan-pay')">Cancel</button><button class="btn pri" onclick="confirmLoanPay()">Pay</button></div>
+</div></div>
+
+<div id="m-loan-edit" class="ov h z-top"><div class="modal" style="max-width:340px">
+  <div class="modal-hd">Edit Minimum Payment</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:12px" id="le-sub"></div>
+  <div class="fld"><label>New Minimum Payment / tick</label><input id="le-amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+  <div class="mfoot"><button class="btn" onclick="closeM('m-loan-edit')">Cancel</button><button class="btn pri" onclick="confirmLoanEdit()">Update</button></div>
+</div></div>
+
+<script>
+const LS='marketsim_v4';
+let S={shops:[],accounts:[]};
+function load(){try{const r=localStorage.getItem(LS);if(r)S=JSON.parse(r);}catch(e){}}
+function save(){localStorage.setItem(LS,JSON.stringify(S));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function fmt(n){return(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});}
+function $$(n){return'$'+fmt(n);}
+function pn(v){return parseFloat(v)||0;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function rtag(r){const m={Common:'C',Uncommon:'U',Rare:'R',Epic:'E',Legendary:'L'};return`<span class="tag ${m[r]||'C'}">${esc(r)}</span>`;}
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',['create','play'][i]===t));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('v-'+t).classList.add('on');
+  renderAll();
+}
+const _shopOpen={},_acctOpen={};
+function isOpen(map,id){return map[id]!==false;}
+function toggleC(map,id){map[id]=!isOpen(map,id);renderAll();}
+function renderAll(){renderShops();renderAccounts();}
+
+function renderShops(){
+  const el=document.getElementById('shops-list');
+  if(!S.shops.length){el.innerHTML='<div class="empty">No shops or mystery boxes yet.</div>';return;}
+  el.innerHTML=[...S.shops].reverse().map(renderShopPanel).join('');
+}
+function renderShopPanel(s){
+  const open=isOpen(_shopOpen,s.id);
+  const isShop=s.type==='shop';
+  const sub=isShop?(s.desc||''):('Price: '+$$(s.price)+(s.desc?' - '+s.desc:''));
+  const items=[...s.items].reverse();
+  const addBtn=isShop
+    ?`<button class="btn" onclick="event.stopPropagation();openShopItemModal('${s.id}')">+ Item</button>`
+    :`<button class="btn" onclick="event.stopPropagation();openMysteryItemModal('${s.id}')">+ Item</button>`;
+  return `<div class="panel">
+  <div class="ph click" onclick="toggleC(_shopOpen,'${s.id}')">
+    <span class="chev ${open?'open':'shut'}">&#9660;</span>
+    <div style="flex:1;min-width:0">
+      <div class="ph-title">${esc(s.name)} <span class="tag">${isShop?'Shop':'Mystery Box'}</span> <span class="tag ${s.enabled?'on':'off'}">${s.enabled?'Active':'Off'}</span></div>
+      ${sub?`<div class="ph-sub">${esc(sub)}</div>`:''}
+    </div>
+    <div class="brow" onclick="event.stopPropagation()">
+      <button class="btn" onclick="toggleShop('${s.id}')">${s.enabled?'Disable':'Enable'}</button>
+      <button class="btn" onclick="editShop('${s.id}')">Edit</button>
+      <button class="btn red" onclick="deleteShop('${s.id}')">Delete</button>
+    </div>
+  </div>
+  <div class="pb${open?'':' h'}">
+    <div class="brow" style="margin-bottom:10px">${addBtn}</div>
+    ${items.length?items.map(it=>renderItemRow(s,it)).join(''):'<div class="empty" style="padding:12px 0">No items yet.</div>'}
+  </div>
+</div>`;}
+
+function renderItemRow(shop,it){
+  const isShop=shop.type==='shop';
+  const priceStr=isShop?$$(it.price):`${fmt(it.chance)}% drop`;
+  const b1=isShop?`<span class="tag ${it.enabled!==false?'on':'off'}">${it.enabled!==false?'Listed':'Hidden'}</span>`:'';
+  const b2=it.installTotal?`<span class="tag INST">Inst ${fmt(it.installMonths)}x${$$(pn(it.installTotal)/pn(it.installMonths))}</span>`:'';
+  const b3=it.maxRepairs>0?`<span class="tag">Repair x${it.maxRepairs}</span>`:'';
+  const toggleBtn=isShop?`<button class="btn" onclick="toggleItem('${shop.id}','${it.id}')">${it.enabled!==false?'Hide':'Show'}</button>`:'';
+  const vars=it.variants||[];
+  const varHtml=vars.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;align-items:center"><span style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px">Variants:</span>${vars.map(v=>`<span class="tag V" style="cursor:pointer" onclick="editVariant('${shop.id}','${it.id}','${v.id}')" title="Click to edit">${esc(v.name)} (${v.delta>=0?'+':''}${$$(v.delta)})</span><button class="btn red" style="font-size:9px;padding:1px 4px;line-height:1.2" onclick="deleteVariant('${shop.id}','${it.id}','${v.id}')">x</button>`).join('')}</div>`:'';
+  return `<div class="irow">
+  <div class="ir-info">
+    <div class="ir-name">${esc(it.name)} ${rtag(it.rarity)} ${b1}${b2}${b3}</div>
+    <div class="ir-meta">${esc(it.type||'')}${it.type?' - ':''}${priceStr} - VPQ: ${$$(it.vpq)} - MaxQ: ${fmt(it.maxQuality)} - Nat: ${fmt(it.ndeg)}% - High: ${fmt(it.hdeg)}%${it.desc?' - '+esc(it.desc):''}</div>
+    ${varHtml}
+  </div>
+  <div class="ir-acts">
+    <div class="brow">${toggleBtn}<button class="btn" onclick="editItem('${shop.id}','${it.id}')">Edit</button><button class="btn red" onclick="deleteItem('${shop.id}','${it.id}')">Del</button></div>
+    <button class="btn" onclick="openVariantModal('${shop.id}','${it.id}')">+ Variant</button>
+  </div>
+</div>`;}
+
+function renderAccounts(){
+  const el=document.getElementById('accounts-list');
+  if(!S.accounts.length){el.innerHTML='<div class="empty">No accounts yet.</div>';return;}
+  el.innerHTML=S.accounts.map(renderAcctPanel).join('');
+  document.querySelectorAll('.ii-desc[data-iid]').forEach(el=>{
+    const iid=el.dataset.iid;
+    for(const a of S.accounts){const it=(a.inventory||[]).find(i=>i.iid===iid);if(it){el.textContent=it.desc||'';break;}}
+  });
+}
+function renderAcctPanel(a){
+  const open=isOpen(_acctOpen,a.id);
+  const inv=a.inventory||[],loans=a.loans||[],listings=a.listings||[];
+  const debt=loans.reduce((s,l)=>s+pn(l.balance),0);
+  const invVal=inv.reduce((s,it)=>s+itemVal(it),0);
+  const net=pn(a.money)+invVal-debt;
+  return `<div class="panel">
+  <div class="ph click" onclick="toggleC(_acctOpen,'${a.id}')">
+    <span class="chev ${open?'open':'shut'}">&#9660;</span>
+    <div style="flex:1;min-width:0">
+      <div class="ph-title">${esc(a.name)}</div>
+      <div class="ph-sub">${$$(a.money)} cash &middot; ${$$(net)} net worth${debt>0?` &middot; <span style="color:var(--red)">${$$(debt)} debt</span>`:''}</div>
+    </div>
+    <div class="brow" onclick="event.stopPropagation()">
+      <button class="btn" onclick="openFinModal('${a.id}')">Finances</button>
+      <button class="btn" onclick="openLoanModal('${a.id}')">Loan</button>
+      <button class="btn pri" onclick="openStore('${a.id}')">Store</button>
+      <button class="btn red" onclick="deleteAccount('${a.id}')">Delete</button>
+    </div>
+  </div>
+  <div class="pb${open?'':' h'}">
+    <div class="stats">
+      <div class="stat"><div class="lbl">Cash</div><div class="val">${$$(a.money)}</div></div>
+      <div class="stat"><div class="lbl">Salary/tick</div><div class="val">${$$(a.salary)}</div></div>
+      <div class="stat"><div class="lbl">Inv. Value</div><div class="val">${$$(invVal)}</div></div>
+      ${debt>0?`<div class="stat"><div class="lbl">Debt</div><div class="val red">${$$(debt)}</div></div>`:''}
+      <div class="stat"><div class="lbl">Net Worth</div><div class="val">${$$(net)}</div></div>
+    </div>
+    ${renderInvTabs(a)}
+  </div>
+</div>`;}
+
+function renderInvTabs(a){
+  const inv=[...(a.inventory||[])].sort((x,y)=>x.name.localeCompare(y.name));
+  const listings=a.listings||[],loans=a.loans||[];
+  const listedIids=new Set(listings.map(l=>l.iid));
+  return `<div style="border:1px solid var(--b1);border-radius:var(--r);overflow:hidden">
+  <div class="itabs">
+    <div class="itab on" onclick="switchInvTab(this,'inv-${a.id}')">Inventory (${inv.length})</div>
+    <div class="itab" onclick="switchInvTab(this,'lst-${a.id}')">Listings (${listings.length})</div>
+    <div class="itab" onclick="switchInvTab(this,'lns-${a.id}')">Loans (${loans.length})</div>
+  </div>
+  <div id="inv-${a.id}" class="ipanel on">${inv.length?inv.map(it=>renderInvItem(a,it,listedIids.has(it.iid))).join(''):'<div class="empty">Inventory is empty.</div>'}</div>
+  <div id="lst-${a.id}" class="ipanel">${listings.length?listings.map(l=>renderListingRow(a,l)).join(''):'<div class="empty">No active listings.</div>'}</div>
+  <div id="lns-${a.id}" class="ipanel">${loans.length?loans.map(l=>renderLoanRow(a,l)).join(''):'<div class="empty">No active loans.</div>'}</div>
+</div>`;}
+
+function switchInvTab(tab,panelId){
+  const wrap=tab.closest('div[style]');
+  wrap.querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));
+  wrap.querySelectorAll('.ipanel').forEach(p=>p.classList.remove('on'));
+  tab.classList.add('on');document.getElementById(panelId)?.classList.add('on');
+}
+function itemVal(it){return pn(it.quality)*pn(it.vpq);}
+
+function renderInvItem(a,it,isListed){
+  const q=pn(it.quality),mq=pn(it.maxQuality);
+  const pct=mq>0?Math.max(0,Math.min(100,q/mq*100)):0;
+  const bc=pct>60?'var(--grn)':pct>30?'var(--orn)':'var(--red)';
+  const val=itemVal(it),hasInst=it.instRemaining>0,canRep=it.repairsLeft>0,atMax=q>=mq;
+  return `<div class="inv-item">
+  <div class="ii-l">
+    <div class="ii-name">${esc(it.name)} ${rtag(it.rarity)}${it.variant?` <span class="tag V">${esc(it.variant)}</span>`:''}${isListed?' <span class="tag on" style="font-size:9px">Listed</span>':''}</div>
+    <div class="ii-type">${esc(it.type||'')}${hasInst?` <span class="tag INST">Inst: ${fmt(it.instRemaining)} left &middot; ${$$(it.instMonthly)}/tick</span>`:''}</div>
+    <div class="ii-desc" data-iid="${esc(it.iid)}"></div>
+    <div class="ii-foot"><div class="qbar"><div class="qbar-bg"><div class="qbar-fill" style="width:${pct}%;background:${bc}"></div></div><span class="qlbl">${fmt(q)} / ${fmt(mq)}</span></div></div>
+  </div>
+  <div class="ii-r">
+    <div class="ii-val">${$$(val)}</div>
+    <div class="ii-btns">
+      ${canRep?`<button class="btn" style="font-size:10px;padding:3px 7px" onclick="openRepair('${a.id}','${it.iid}')" ${atMax?'disabled title="Max quality"':''}>&#128295;</button>`:''}
+      ${!isListed?`<button class="btn blu" style="font-size:10px;padding:3px 7px" onclick="openListModal('${a.id}','${it.iid}')">List</button>`:`<button class="btn" style="font-size:10px;padding:3px 7px" onclick="delistItem('${a.id}','${it.iid}')">Delist</button>`}
+      <button class="btn grn" style="font-size:10px;padding:3px 7px" onclick="sellItem('${a.id}','${it.iid}')">Sell</button>
+      <button class="btn orn" style="font-size:10px;padding:3px 7px" title="Transfer" onclick="openTransfer('${a.id}','${it.iid}')">&#8594;</button>
+      <button class="btn red" style="font-size:10px;padding:3px 7px" onclick="delInvItem('${a.id}','${it.iid}')">&#215;</button>
+    </div>
+  </div>
+</div>`;}
+
+function renderListingRow(a,l){
+  const it=(a.inventory||[]).find(x=>x.iid===l.iid);if(!it)return'';
+  return `<div class="lr">
+  <div class="lr-info"><div class="lr-name">${esc(it.name)} ${rtag(it.rarity)}${it.variant?` <span class="tag V">${esc(it.variant)}</span>`:''}</div>
+  <div class="lr-meta">Q: ${fmt(it.quality)} / ${fmt(it.maxQuality)} &middot; Value: ${$$(itemVal(it))}</div></div>
+  <div class="lr-right"><div class="lr-price">${$$(l.askPrice)}</div><button class="btn red" style="font-size:10px" onclick="delistItem('${a.id}','${it.iid}')">Delist</button></div>
+</div>`;}
+
+function renderLoanRow(a,l){
+  const interest=l.type==='compound'?pn(l.balance)*pn(l.rate)/100:pn(l.principal)*pn(l.rate)/100;
+  return `<div class="lr">
+  <div class="lr-info"><div class="lr-name">${esc(l.label||'Loan')}</div>
+  <div class="lr-meta">${l.type==='compound'?'Compound':'Simple'} &middot; ${fmt(l.rate)}%/tick &middot; Pay ${$$(l.payment)}/tick &middot; Interest: ${$$(interest)}/tick</div></div>
+  <div class="lr-right"><div class="lr-price red">${$$(l.balance)}</div>
+  <button class="btn" style="font-size:10px" onclick="openLoanEdit('${a.id}','${l.lid}')">Edit Pay</button>
+  <button class="btn grn" style="font-size:10px" onclick="openLoanPay('${a.id}','${l.lid}')">Pay Extra</button></div>
+</div>`;}
+
+function advanceTime(){
+  S.accounts.forEach(a=>{
+    a.money=pn(a.money)+pn(a.salary);
+    (a.inventory||[]).forEach(it=>{
+      if(!(it.instRemaining>0))return;
+      a.money=pn(a.money)-pn(it.instMonthly);
+      it.instRemaining=pn(it.instRemaining)-1;
+      if(it.instRemaining<=0){it.instRemaining=0;it.instMonthly=null;it.instTotal=null;}
+    });
+    (a.loans||[]).forEach(l=>{
+      if(pn(l.balance)<=0)return;
+      const interest=l.type==='compound'?pn(l.balance)*pn(l.rate)/100:pn(l.principal)*pn(l.rate)/100;
+      l.balance=pn(l.balance)+interest;
+      const pay=Math.min(pn(l.payment),pn(l.balance));
+      l.balance=Math.max(0,pn(l.balance)-pay);a.money=pn(a.money)-pay;
+    });
+    a.loans=(a.loans||[]).filter(l=>pn(l.balance)>0);
+    (a.inventory||[]).forEach(it=>{
+      if(pn(it.quality)<=1)return;
+      if(Math.random()*100<pn(it.ndeg))it.quality=Math.max(1,pn(it.quality)-1);
+      if(pn(it.quality)>1&&Math.random()*100<pn(it.hdeg))it.quality=Math.max(1,Math.floor(pn(it.quality)*0.5));
+    });
+  });
+  save();renderAll();
+  toast('Time advanced - salaries, instalments, loans and degradation applied.');
+}
+
+let _eid=null;
+function openShopModal(){_eid=null;c('s-name','');c('s-desc','');openM('m-shop');}
+function editShop(id){
+  const s=S.shops.find(x=>x.id===id);if(!s)return;
+  if(s.type==='mystery'){editMystery(id);return;}
+  _eid=id;c('s-name',s.name);c('s-desc',s.desc||'');openM('m-shop');
+}
+function saveShop(){
+  const name=g('s-name').trim();if(!name)return toast('Name required.');
+  if(_eid){const s=S.shops.find(x=>x.id===_eid);if(s){s.name=name;s.desc=g('s-desc');}}
+  else S.shops.push({id:uid(),type:'shop',name,desc:g('s-desc'),enabled:true,items:[]});
+  _eid=null;closeM('m-shop');save();renderShops();
+}
+function toggleShop(id){const s=S.shops.find(x=>x.id===id);if(s){s.enabled=!s.enabled;save();renderShops();}}
+function deleteShop(id){if(!confirm('Delete shop and all its items?'))return;S.shops=S.shops.filter(x=>x.id!==id);save();renderShops();}
+
+let _emid=null;
+function openMysteryModal(){_emid=null;c('mb-name','');c('mb-desc','');c('mb-price','');openM('m-mystery');}
+function editMystery(id){const s=S.shops.find(x=>x.id===id);if(!s)return;_emid=id;c('mb-name',s.name);c('mb-desc',s.desc||'');c('mb-price',s.price||'');openM('m-mystery');}
+function saveMystery(){
+  const name=g('mb-name').trim();if(!name)return toast('Name required.');
+  const price=pn(g('mb-price'));
+  if(_emid){const s=S.shops.find(x=>x.id===_emid);if(s){s.name=name;s.desc=g('mb-desc');s.price=price;}}
+  else S.shops.push({id:uid(),type:'mystery',name,desc:g('mb-desc'),price,enabled:true,items:[]});
+  _emid=null;closeM('m-mystery');save();renderShops();
+}
+
+let _eshopId=null,_eitemId=null;
+function clearIF(p){
+  ['name','type','desc','maxq','vpq','maxrep','ndeg','hdeg'].forEach(k=>c(p+'-'+k,''));
+  c(p+'-rarity','Common');
+  if(p==='si'){c('si-price','');c('si-itotal','');c('si-imonths','');}
+  if(p==='mi')c('mi-chance','');
+}
+function openShopItemModal(sid){_eshopId=sid;_eitemId=null;clearIF('si');v('m-sitem-t','New Item');openM('m-sitem');}
+function openMysteryItemModal(sid){_eshopId=sid;_eitemId=null;clearIF('mi');v('m-mitem-t','New Mystery Item');openM('m-mitem');}
+function editItem(shopId,itemId){
+  const s=S.shops.find(x=>x.id===shopId);const it=s&&s.items.find(x=>x.id===itemId);if(!it)return;
+  _eshopId=shopId;_eitemId=itemId;
+  if(s.type==='shop'){
+    v('m-sitem-t','Edit Item');
+    c('si-name',it.name);c('si-type',it.type||'');c('si-rarity',it.rarity||'Common');c('si-desc',it.desc||'');
+    c('si-price',it.price||'');c('si-maxq',it.maxQuality||'');c('si-vpq',it.vpq||'');c('si-maxrep',it.maxRepairs||'');
+    c('si-ndeg',it.ndeg||'');c('si-hdeg',it.hdeg||'');c('si-itotal',it.installTotal||'');c('si-imonths',it.installMonths||'');
+    openM('m-sitem');
+  }else{
+    v('m-mitem-t','Edit Mystery Item');
+    c('mi-name',it.name);c('mi-type',it.type||'');c('mi-rarity',it.rarity||'Common');c('mi-desc',it.desc||'');
+    c('mi-chance',it.chance||'');c('mi-maxq',it.maxQuality||'');c('mi-vpq',it.vpq||'');c('mi-maxrep',it.maxRepairs||'');
+    c('mi-ndeg',it.ndeg||'');c('mi-hdeg',it.hdeg||'');openM('m-mitem');
+  }
+}
+function saveShopItem(){
+  const name=g('si-name').trim();if(!name)return toast('Name required.');
+  const s=S.shops.find(x=>x.id===_eshopId);if(!s)return;
+  const iT=pn(g('si-itotal')),iM=Math.max(1,pn(g('si-imonths'))||12);
+  const data={name,type:g('si-type').trim(),rarity:g('si-rarity'),desc:g('si-desc'),
+    price:pn(g('si-price')),maxQuality:pn(g('si-maxq'))||10,vpq:pn(g('si-vpq')),
+    maxRepairs:Math.floor(pn(g('si-maxrep')))||0,ndeg:pn(g('si-ndeg')),hdeg:pn(g('si-hdeg')),
+    enabled:true,installTotal:iT||null,installMonths:iT?iM:null};
+  if(_eitemId){const idx=s.items.findIndex(x=>x.id===_eitemId);if(idx>=0){s.items[idx]={...s.items[idx],...data};propagate(s.id,_eitemId,data);}}
+  else s.items.push({id:uid(),variants:[],...data});
+  _eitemId=null;closeM('m-sitem');save();renderAll();
+}
+function saveMysteryItem(){
+  const name=g('mi-name').trim();if(!name)return toast('Name required.');
+  const s=S.shops.find(x=>x.id===_eshopId);if(!s)return;
+  const data={name,type:g('mi-type').trim(),rarity:g('mi-rarity'),desc:g('mi-desc'),
+    chance:pn(g('mi-chance')),maxQuality:pn(g('mi-maxq'))||10,vpq:pn(g('mi-vpq')),
+    maxRepairs:Math.floor(pn(g('mi-maxrep')))||0,ndeg:pn(g('mi-ndeg')),hdeg:pn(g('mi-hdeg'))};
+  if(_eitemId){const idx=s.items.findIndex(x=>x.id===_eitemId);if(idx>=0){s.items[idx]={...s.items[idx],...data};propagate(s.id,_eitemId,data);}}
+  else s.items.push({id:uid(),variants:[],...data});
+  _eitemId=null;closeM('m-mitem');save();renderAll();
+}
+function propagate(shopId,itemId,data){
+  S.accounts.forEach(a=>(a.inventory||[]).forEach(inv=>{
+    if(inv.shopId===shopId&&inv.itemId===itemId){
+      inv.name=data.name;inv.type=data.type;inv.rarity=data.rarity;inv.desc=data.desc;
+      inv.vpq=data.vpq;inv.maxQuality=data.maxQuality;inv.ndeg=data.ndeg;inv.hdeg=data.hdeg;
+    }
+  }));
+}
+function toggleItem(shopId,itemId){
+  const s=S.shops.find(x=>x.id===shopId);const it=s&&s.items.find(x=>x.id===itemId);
+  if(it){it.enabled=it.enabled===false?true:false;save();renderShops();}
+}
+function deleteItem(shopId,itemId){if(!confirm('Delete item?'))return;const s=S.shops.find(x=>x.id===shopId);if(s)s.items=s.items.filter(x=>x.id!==itemId);save();renderShops();}
+
+let _vShopId=null,_vItemId=null,_vId=null;
+function openVariantModal(shopId,itemId){
+  _vShopId=shopId;_vItemId=itemId;_vId=null;
+  const s=S.shops.find(x=>x.id===shopId);const it=s&&s.items.find(x=>x.id===itemId);if(!it)return;
+  v('m-variant-t','New Variant');
+  document.getElementById('m-variant-sub').textContent='For: '+it.name+' - Base: '+$$(it.price)+' - VPQ: '+$$(it.vpq);
+  c('vr-name','');c('vr-delta','');c('vr-sign','1');openM('m-variant');
+}
+function editVariant(shopId,itemId,variantId){
+  _vShopId=shopId;_vItemId=itemId;_vId=variantId;
+  const s=S.shops.find(x=>x.id===shopId);const it=s&&s.items.find(x=>x.id===itemId);
+  const vr=it&&(it.variants||[]).find(x=>x.id===variantId);if(!vr)return;
+  v('m-variant-t','Edit Variant');
+  document.getElementById('m-variant-sub').textContent='For: '+it.name+' - Base: '+$$(it.price)+' - VPQ: '+$$(it.vpq);
+  c('vr-name',vr.name);c('vr-sign',vr.delta<0?'-1':'1');c('vr-delta',Math.abs(vr.delta));openM('m-variant');
+}
+function saveVariant(){
+  const name=g('vr-name').trim();if(!name)return toast('Variant name required.');
+  const delta=parseInt(g('vr-sign'))*pn(g('vr-delta'));
+  const s=S.shops.find(x=>x.id===_vShopId);const it=s&&s.items.find(x=>x.id===_vItemId);if(!it)return;
+  it.variants=it.variants||[];
+  if(_vId){const vr=it.variants.find(x=>x.id===_vId);if(vr){vr.name=name;vr.delta=delta;}}
+  else it.variants.push({id:uid(),name,delta});
+  _vId=null;closeM('m-variant');save();renderShops();toast('Variant "'+name+'" saved.');
+}
+function deleteVariant(shopId,itemId,variantId){
+  const s=S.shops.find(x=>x.id===shopId);const it=s&&s.items.find(x=>x.id===itemId);if(!it)return;
+  it.variants=(it.variants||[]).filter(x=>x.id!==variantId);save();renderShops();toast('Variant deleted.');
+}
+
+function openAccountModal(){c('ac-name','');c('ac-money','');c('ac-salary','');openM('m-acct');}
+function saveAccount(){
+  const name=g('ac-name').trim();if(!name)return toast('Name required.');
+  S.accounts.push({id:uid(),name,money:pn(g('ac-money')),salary:pn(g('ac-salary')),inventory:[],listings:[],loans:[]});
+  closeM('m-acct');save();renderAccounts();
+}
+function deleteAccount(id){if(!confirm('Delete this account?'))return;S.accounts=S.accounts.filter(x=>x.id!==id);save();renderAccounts();}
+
+let _finId=null;
+function openFinModal(id){_finId=id;const a=S.accounts.find(x=>x.id===id);if(!a)return;c('fin-adj','');c('fin-salary',a.salary||0);openM('m-fin');}
+function adjMoney(sign){
+  const val=pn(g('fin-adj'));if(!val)return toast('Enter an amount.');
+  const a=S.accounts.find(x=>x.id===_finId);if(!a)return;
+  a.money=pn(a.money)+sign*val;save();renderAccounts();toast(sign>0?'+ '+$$(val)+' added':'- '+$$(val)+' subtracted');
+}
+function saveSalary(){
+  const val=pn(g('fin-salary'));const a=S.accounts.find(x=>x.id===_finId);if(!a)return;
+  a.salary=val;closeM('m-fin');save();renderAccounts();toast('Salary set to '+$$(val));
+}
+
+let _loanAcctId=null,_loanId=null;
+function openLoanModal(id){
+  _loanAcctId=id;
+  ['ln-label','ln-principal','ln-rate','ln-payment','ln-extra'].forEach(x=>c(x,''));
+  c('ln-type','simple');openM('m-loan');
+}
+function saveLoan(){
+  const principal=pn(g('ln-principal'));if(!principal)return toast('Principal required.');
+  const rate=pn(g('ln-rate')),payment=pn(g('ln-payment')),extra=pn(g('ln-extra'));
+  const a=S.accounts.find(x=>x.id===_loanAcctId);if(!a)return;
+  const balance=Math.max(0,principal-extra);
+  a.money=pn(a.money)+principal-extra;
+  (a.loans=a.loans||[]).push({lid:uid(),label:g('ln-label').trim()||'Loan',principal,balance,rate,type:g('ln-type'),payment});
+  closeM('m-loan');save();renderAccounts();
+  toast('Loan of '+$$(principal)+' taken. Net received: '+$$(principal-extra));
+}
+function openLoanPay(acctId,loanId){
+  _loanAcctId=acctId;_loanId=loanId;
+  const a=S.accounts.find(x=>x.id===acctId);const l=(a&&a.loans||[]).find(x=>x.lid===loanId);if(!l)return;
+  document.getElementById('lp-sub').textContent='"'+(l.label||'Loan')+'" - Balance: '+$$(l.balance)+' - Your cash: '+$$(a.money);
+  c('lp-amount','');openM('m-loan-pay');
+}
+function confirmLoanPay(){
+  const amt=pn(g('lp-amount'));if(!amt)return toast('Enter an amount.');
+  const a=S.accounts.find(x=>x.id===_loanAcctId);const l=(a&&a.loans||[]).find(x=>x.lid===_loanId);if(!a||!l)return;
+  if(pn(a.money)<amt)return toast('Not enough money!');
+  const pay=Math.min(amt,pn(l.balance));
+  l.balance=Math.max(0,pn(l.balance)-pay);a.money=pn(a.money)-pay;
+  if(l.balance<=0){a.loans=a.loans.filter(x=>x.lid!==_loanId);toast('Loan fully paid off!');}
+  else toast('Paid '+$$(pay)+' - Remaining: '+$$(l.balance));
+  closeM('m-loan-pay');save();renderAccounts();
+}
+function openLoanEdit(acctId,loanId){
+  _loanAcctId=acctId;_loanId=loanId;
+  const a=S.accounts.find(x=>x.id===acctId);const l=(a&&a.loans||[]).find(x=>x.lid===loanId);if(!l)return;
+  document.getElementById('le-sub').textContent='"'+(l.label||'Loan')+'" - Balance: '+$$(l.balance)+' - Current: '+$$(l.payment)+'/tick';
+  c('le-amount',l.payment);openM('m-loan-edit');
+}
+function confirmLoanEdit(){
+  const amt=pn(g('le-amount'));
+  const a=S.accounts.find(x=>x.id===_loanAcctId);const l=(a&&a.loans||[]).find(x=>x.lid===_loanId);if(!a||!l)return;
+  l.payment=amt;closeM('m-loan-edit');save();renderAccounts();toast('Min payment updated to '+$$(amt)+'/tick');
+}
+
+let _storeAcctId=null;
+function openStore(id){_storeAcctId=id;_pendingBuy=null;buildStore();openM('m-store');}
+function buildStore(){
+  const el=document.getElementById('store-body');
+  const a=S.accounts.find(x=>x.id===_storeAcctId);
+  const active=[...S.shops].filter(x=>x.enabled).reverse();
+  let h='<div style="font-size:11px;color:var(--t2);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--b1)">Shopping as <strong>'+esc(a&&a.name||'')+'</strong> &middot; Cash: <strong>'+$$(a&&a.money)+'</strong></div>';
+  const allListings=[];
+  S.accounts.forEach(seller=>{
+    if(seller.id===_storeAcctId)return;
+    (seller.listings||[]).forEach(l=>{
+      const it=(seller.inventory||[]).find(x=>x.iid===l.iid);
+      if(it)allListings.push({seller,listing:l,item:it});
+    });
+  });
+  if(allListings.length){
+    h+='<div class="store-sec"><div class="store-sec-hd">Player Market</div>';
+    allListings.forEach(function(entry){
+      const seller=entry.seller,listing=entry.listing,item=entry.item;
+      h+='<div class="srow"><div class="sr-info"><div class="sr-name">'+esc(item.name)+' '+rtag(item.rarity)+(item.variant?' <span class="tag V">'+esc(item.variant)+'</span>':'')+'</div><div class="sr-meta">Seller: <strong>'+esc(seller.name)+'</strong> &middot; Q: '+fmt(item.quality)+'/'+fmt(item.maxQuality)+' &middot; VPQ: '+$$(item.vpq)+'</div></div><div class="sr-r"><div class="sr-price">'+$$(listing.askPrice)+'</div><button class="btn pri" style="font-size:10px" onclick="buyFromMarket(\''+seller.id+'\',\''+listing.lid+'\')">Buy</button></div></div>';
+    });
+    h+='</div>';
+  }
+  if(!active.length&&!allListings.length){el.innerHTML=h+'<div class="empty">No active shops or listings.</div>';return;}
+  active.forEach(s=>{
+    if(s.type==='shop'){
+      const vis=[...s.items].filter(it=>it.enabled!==false).reverse();
+      h+='<div class="store-sec"><div class="store-sec-hd">'+esc(s.name)+(s.desc?'<span> - '+esc(s.desc)+'</span>':'')+'</div>';
+      if(!vis.length){h+='<div style="font-size:11px;color:var(--t3);padding:4px 0">No items available.</div>';}
+      else vis.forEach(it=>{
+        const disc=pn(it.price)*0.8;
+        const hasInst=it.installTotal&&it.installMonths;
+        const monthly=hasInst?pn(it.installTotal)/pn(it.installMonths):0;
+        const canInst=hasInst&&a&&pn(a.salary)>=monthly;
+        h+='<div class="srow"><div class="sr-info"><div class="sr-name">'+esc(it.name)+' '+rtag(it.rarity)+'</div><div class="sr-meta">'+esc(it.type||'')+(it.type?' &middot; ':'')+'MaxQ: '+fmt(it.maxQuality)+' &middot; VPQ: '+$$(it.vpq)+(it.maxRepairs>0?' &middot; Repairs: '+it.maxRepairs:'')+'</div>'+(hasInst?'<div class="sr-meta" style="color:var(--blu)">Inst: '+$$(it.installTotal)+' total &middot; '+fmt(it.installMonths)+' payments &middot; '+$$(monthly)+'/tick</div>':'')+'</div><div class="sr-r"><div class="sr-price">'+$$(it.price)+'</div><div class="brow" style="justify-content:flex-end"><button class="btn pri" style="font-size:10px" onclick="buyFull(\''+s.id+'\',\''+it.id+'\')">Full</button><button class="btn orn" style="font-size:10px" onclick="buyDisc(\''+s.id+'\',\''+it.id+'\')" title="20% off, random quality">'+$$(disc)+' -20%</button>'+(hasInst?'<button class="btn blu" style="font-size:10px" onclick="buyInstalment(\''+s.id+'\',\''+it.id+'\')" '+(canInst?'':'disabled title="Salary too low"')+'>Inst '+fmt(it.installMonths)+'x</button>':'')+'</div></div></div>';
+      });
+      h+='</div>';
+    }else{
+      h+='<div class="store-sec"><div class="store-sec-hd">Mystery: '+esc(s.name)+(s.desc?'<span> - '+esc(s.desc)+'</span>':'')+'</div>';
+      h+='<div style="font-size:12px;margin-bottom:6px">Price: <strong>'+$$(s.price)+'</strong> &middot; '+s.items.length+' item'+(s.items.length!==1?'s':'')+' in pool</div>';
+      [...s.items].reverse().forEach(it=>{h+='<div style="font-size:11px;color:var(--t2);padding:2px 0">'+rtag(it.rarity)+' '+esc(it.name)+' - '+fmt(it.chance)+'%</div>';});
+      h+='<div style="margin-top:10px"><button class="btn pri" onclick="buyBox(\''+s.id+'\')">Open Box - '+$$(s.price)+'</button></div></div>';
+    }
+  });
+  el.innerHTML=h;
+}
+
+let _pendingBuy=null;
+function showVariantPicker(shopId,itemId,mode){
+  const s=S.shops.find(x=>x.id===shopId);const it=s&&s.items.find(x=>x.id===itemId);if(!it)return;
+  const variants=it.variants||[];
+  if(!variants.length){executeBuy(shopId,itemId,mode,null);return;}
+  _pendingBuy={shopId,itemId,mode};
+  const basePrice=mode==='disc'?pn(it.price)*0.8:mode==='inst'?pn(it.installTotal)/pn(it.installMonths):pn(it.price);
+  const lbl=mode==='disc'?'20% off':mode==='inst'?'per payment':'full price';
+  document.getElementById('vpick-t').textContent='Pick a variant - '+it.name;
+  document.getElementById('vpick-sub').textContent='Base ('+lbl+'): '+$$(basePrice)+' - VPQ: '+$$(it.vpq);
+  let h='<div class="vopt" onclick="pickVariant(null)"><span class="vn">No variant (base)</span><span class="vd">'+$$(basePrice)+(mode==='inst'?'/tick':'')+' - VPQ: '+$$(it.vpq)+'</span></div>';
+  variants.forEach(vr=>{
+    const fp=mode==='inst'?(pn(it.installTotal)+vr.delta)/pn(it.installMonths):basePrice+vr.delta;
+    const adjVpq=Math.max(0,pn(it.vpq)+vr.delta/pn(it.maxQuality));
+    const sign=vr.delta>=0?'+':'';
+    h+='<div class="vopt" onclick="pickVariant(\''+vr.id+'\')"><span class="vn">'+esc(vr.name)+'</span><span class="vd">'+sign+$$(vr.delta)+' -> '+$$(fp)+(mode==='inst'?'/tick':'')+' - VPQ: '+$$(adjVpq)+'</span></div>';
+  });
+  document.getElementById('vpick-opts').innerHTML=h;openM('m-vpick');
+}
+function pickVariant(variantId){
+  if(!_pendingBuy)return;
+  const{shopId,itemId,mode}=_pendingBuy;_pendingBuy=null;closeM('m-vpick');executeBuy(shopId,itemId,mode,variantId);
+}
+function executeBuy(shopId,itemId,mode,variantId){
+  const a=S.accounts.find(x=>x.id===_storeAcctId);
+  const s=S.shops.find(x=>x.id===shopId);const it=s&&s.items.find(x=>x.id===itemId);if(!a||!it)return;
+  const vr=variantId?(it.variants||[]).find(x=>x.id===variantId):null;
+  const delta=vr?vr.delta:0;
+  const finalVpq=Math.max(0,pn(it.vpq)+(vr?delta/pn(it.maxQuality):0));
+  const vname=vr?vr.name:null;
+  if(mode==='full'){
+    const price=pn(it.price)+delta;if(pn(a.money)<price)return toast('Not enough money!');
+    a.money=pn(a.money)-price;addToInv(a,s,it,pn(it.maxQuality),null,vname,finalVpq);
+    save();buildStore();renderAccounts();toast('Bought '+it.name+(vname?' ('+vname+')':'')+' at max quality for '+$$(price));
+  }else if(mode==='disc'){
+    const price=(pn(it.price)+delta)*0.8;if(pn(a.money)<price)return toast('Not enough money!');
+    const q=Math.max(1,Math.ceil(Math.random()*pn(it.maxQuality)));
+    a.money=pn(a.money)-price;addToInv(a,s,it,q,null,vname,finalVpq);
+    save();buildStore();renderAccounts();toast('Bought '+it.name+(vname?' ('+vname+')':'')+' Q:'+fmt(q)+' for '+$$(price));
+  }else if(mode==='inst'){
+    const total=pn(it.installTotal)+delta,monthly=total/pn(it.installMonths);
+    if(pn(a.salary)<monthly)return toast('Salary too low! Need at least '+$$(monthly)+'/tick.');
+    addToInv(a,s,it,pn(it.maxQuality),{monthly,remaining:pn(it.installMonths),total},vname,finalVpq);
+    save();buildStore();renderAccounts();toast('Instalment: '+it.name+(vname?' ('+vname+')':'')+' - '+fmt(it.installMonths)+'x '+$$(monthly)+'/tick');
+  }
+}
+function buyFull(sid,iid){showVariantPicker(sid,iid,'full');}
+function buyDisc(sid,iid){showVariantPicker(sid,iid,'disc');}
+function buyInstalment(sid,iid){showVariantPicker(sid,iid,'inst');}
+function buyBox(shopId){
+  const a=S.accounts.find(x=>x.id===_storeAcctId);const s=S.shops.find(x=>x.id===shopId);if(!a||!s)return;
+  if(pn(a.money)<pn(s.price))return toast('Not enough money!');
+  if(!s.items.length)return toast('Box has no items!');
+  const roll=Math.random()*100;let cum=0,won=null;
+  for(const it of s.items){cum+=pn(it.chance);if(roll<cum){won=it;break;}}
+  a.money=pn(a.money)-pn(s.price);
+  if(!won){save();buildStore();renderAccounts();return toast('Opened '+s.name+' - No item won.');}
+  const q=Math.max(1,Math.ceil(Math.random()*pn(won.maxQuality)));
+  addToInv(a,s,won,q,null,null,pn(won.vpq));
+  save();buildStore();renderAccounts();toast('Got: '+won.name+' '+won.rarity+' (Q:'+fmt(q)+') from '+s.name+'!');
+}
+function addToInv(a,s,it,quality,inst,variantName,finalVpq){
+  (a.inventory=a.inventory||[]).push({
+    iid:uid(),shopId:s.id,itemId:it.id,
+    name:it.name,type:it.type||'',rarity:it.rarity||'Common',desc:it.desc||'',
+    quality,maxQuality:pn(it.maxQuality),vpq:finalVpq,ndeg:pn(it.ndeg),hdeg:pn(it.hdeg),
+    variant:variantName,repairsLeft:Math.floor(pn(it.maxRepairs))||0,
+    instMonthly:inst?inst.monthly:null,instRemaining:inst?inst.remaining:null,instTotal:inst?inst.total:null
+  });
+}
+function buyFromMarket(sellerId,listingId){
+  const buyer=S.accounts.find(x=>x.id===_storeAcctId);
+  const seller=S.accounts.find(x=>x.id===sellerId);if(!buyer||!seller)return;
+  const lIdx=(seller.listings||[]).findIndex(x=>x.lid===listingId);if(lIdx<0)return;
+  const listing=seller.listings[lIdx];
+  const it=(seller.inventory||[]).find(x=>x.iid===listing.iid);if(!it)return;
+  if(it.instRemaining>0)return toast("Can't buy - seller still paying instalment.");
+  if(pn(buyer.money)<pn(listing.askPrice))return toast('Not enough money!');
+  buyer.money=pn(buyer.money)-pn(listing.askPrice);
+  seller.money=pn(seller.money)+pn(listing.askPrice);
+  seller.inventory=(seller.inventory||[]).filter(x=>x.iid!==listing.iid);
+  seller.listings.splice(lIdx,1);
+  (buyer.inventory=buyer.inventory||[]).push(it);
+  save();buildStore();renderAccounts();toast('Bought '+it.name+' from '+seller.name+' for '+$$(listing.askPrice));
+}
+
+let _listAcctId=null,_listIid=null;
+function openListModal(acctId,iid){
+  const a=S.accounts.find(x=>x.id===acctId);const it=(a&&a.inventory||[]).find(x=>x.iid===iid);if(!it)return;
+  if(it.instRemaining>0)return toast("Can't list - item still has instalment payments.");
+  _listAcctId=acctId;_listIid=iid;
+  document.getElementById('list-sub').textContent=it.name+' - Current value: '+$$(itemVal(it));
+  c('list-price',fmt(itemVal(it)).replace(/,/g,''));openM('m-list');
+}
+function confirmList(){
+  const price=pn(g('list-price'));if(!price)return toast('Set an asking price.');
+  const a=S.accounts.find(x=>x.id===_listAcctId);if(!a)return;
+  if((a.listings||[]).find(l=>l.iid===_listIid))return toast('Already listed.');
+  (a.listings=a.listings||[]).push({lid:uid(),iid:_listIid,askPrice:price});
+  closeM('m-list');save();renderAccounts();toast('Listed for '+$$(price));
+}
+function delistItem(acctId,iid){
+  const a=S.accounts.find(x=>x.id===acctId);if(!a)return;
+  a.listings=(a.listings||[]).filter(l=>l.iid!==iid);
+  save();renderAccounts();toast('Listing removed.');
+}
+
+function sellItem(acctId,iid){
+  const a=S.accounts.find(x=>x.id===acctId);const it=(a&&a.inventory||[]).find(x=>x.iid===iid);if(!it)return;
+  const val=itemVal(it),hasInst=it.instRemaining>0;
+  const debt=hasInst?pn(it.instRemaining)*pn(it.instMonthly):0,proceeds=val-debt;
+  const msg=hasInst?'Sell "'+it.name+'" for '+$$(val)+'?\nInstalment debt: '+$$(debt)+'\nNet proceeds: '+$$(proceeds):'Sell "'+it.name+'" for '+$$(val)+'?';
+  if(!confirm(msg))return;
+  a.money=pn(a.money)+proceeds;
+  a.inventory=a.inventory.filter(x=>x.iid!==iid);
+  a.listings=(a.listings||[]).filter(l=>l.iid!==iid);
+  save();renderAccounts();toast('Sold '+it.name+' - Net: '+$$(proceeds));
+}
+function delInvItem(acctId,iid){
+  const a=S.accounts.find(x=>x.id===acctId);if(!a||!confirm('Delete this item?'))return;
+  a.inventory=a.inventory.filter(x=>x.iid!==iid);
+  a.listings=(a.listings||[]).filter(l=>l.iid!==iid);
+  save();renderAccounts();toast('Item removed.');
+}
+
+let _repairAcctId=null,_repairIid=null;
+function openRepair(acctId,iid){
+  const a=S.accounts.find(x=>x.id===acctId);const it=(a&&a.inventory||[]).find(x=>x.iid===iid);if(!a||!it)return;
+  const q=pn(it.quality),mq=pn(it.maxQuality);if(q>=mq)return;
+  const missing=mq-q,cost=missing*pn(it.vpq)*1.5;
+  _repairAcctId=acctId;_repairIid=iid;
+  document.getElementById('repair-body').innerHTML='<div style="font-weight:700;font-size:13px;margin-bottom:10px">'+esc(it.name)+(it.variant?' <span class="tag V">'+esc(it.variant)+'</span>':'')+'</div><div class="stats" style="margin-bottom:10px"><div class="stat"><div class="lbl">Quality</div><div class="val">'+fmt(q)+'/'+fmt(mq)+'</div></div><div class="stat"><div class="lbl">Missing</div><div class="val">'+fmt(missing)+'</div></div><div class="stat"><div class="lbl">VPQ</div><div class="val">'+$$(it.vpq)+'</div></div><div class="stat"><div class="lbl">Repairs Left</div><div class="val '+(it.repairsLeft>0?'':'red')+'">'+it.repairsLeft+'</div></div></div><div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:10px 12px;margin-bottom:10px;font-size:12px">Cost = '+fmt(missing)+' x '+$$(it.vpq)+' x 1.5 = <strong style="font-size:14px">'+$$(cost)+'</strong></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2)"><span>Your cash: <strong>'+$$(a.money)+'</strong></span>'+(pn(a.money)<cost?'<span style="color:var(--red);font-weight:700">Not enough money</span>':'<span style="color:var(--grn);font-weight:700">Can afford</span>')+'</div>';
+  openM('m-repair');
+}
+function confirmRepair(){
+  const a=S.accounts.find(x=>x.id===_repairAcctId);const it=(a&&a.inventory||[]).find(x=>x.iid===_repairIid);if(!a||!it)return;
+  const missing=pn(it.maxQuality)-pn(it.quality),cost=missing*pn(it.vpq)*1.5;
+  if(pn(a.money)<cost)return toast('Not enough money!');
+  if(it.repairsLeft<=0)return toast('No repair charges left!');
+  a.money=pn(a.money)-cost;it.quality=pn(it.maxQuality);it.repairsLeft--;
+  closeM('m-repair');save();renderAccounts();toast('Repaired for '+$$(cost)+' - '+it.repairsLeft+' repair'+(it.repairsLeft!==1?'s':'')+' left');
+}
+
+let _trFrom=null,_trIid=null;
+function openTransfer(acctId,iid){
+  _trFrom=acctId;_trIid=iid;
+  const a=S.accounts.find(x=>x.id===acctId);const it=(a&&a.inventory||[]).find(x=>x.iid===iid);if(!it)return;
+  document.getElementById('tr-item-name').textContent=it.name;
+  const others=S.accounts.filter(x=>x.id!==acctId);
+  document.getElementById('tr-accts').innerHTML=others.length
+    ?others.map(o=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--b1)"><span style="font-size:12px;font-weight:700">'+esc(o.name)+'</span><button class="btn pri" onclick="doTransfer(\''+o.id+'\')">Send</button></div>').join('')
+    :'<div class="empty" style="padding:14px">No other accounts.</div>';
+  openM('m-transfer');
+}
+function doTransfer(toId){
+  const from=S.accounts.find(x=>x.id===_trFrom);const to=S.accounts.find(x=>x.id===toId);if(!from||!to)return;
+  const idx=(from.inventory||[]).findIndex(x=>x.iid===_trIid);if(idx<0)return;
+  const item=from.inventory[idx];
+  if(item.instRemaining>0){
+    const debt=pn(item.instRemaining)*pn(item.instMonthly);
+    if(!confirm('"'+item.name+'" has '+fmt(item.instRemaining)+' payments left ('+$$(debt)+' debt).\nDebt transfers with item. Continue?'))return;
+  }
+  from.inventory.splice(idx,1);
+  from.listings=(from.listings||[]).filter(l=>l.iid!==item.iid);
+  (to.inventory=to.inventory||[]).push(item);
+  closeM('m-transfer');save();renderAccounts();toast('Transferred '+item.name+' to '+to.name);
+}
+
+function openM(id){document.getElementById(id).classList.remove('h');}
+function closeM(id){document.getElementById(id).classList.add('h');}
+document.querySelectorAll('.ov').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.add('h');}));
+function g(id){return document.getElementById(id)&&document.getElementById(id).value||'';}
+function c(id,val){const el=document.getElementById(id);if(el)el.value=val;}
+function v(id,txt){const el=document.getElementById(id);if(el)el.textContent=txt;}
+let _tt=null;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3200);}
+
+load();renderAll();
+</script>
+</body>
+</html>
